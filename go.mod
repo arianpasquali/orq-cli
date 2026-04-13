@@ -3,6 +3,8 @@ module orq
 go 1.23
 
 require (
+	github.com/AlecAivazis/survey/v2 v2.3.7
+	github.com/mattn/go-isatty v0.0.8
 	github.com/orq-ai/bartolo v0.2.0
 	github.com/pkg/errors v0.8.1
 	github.com/rs/zerolog v1.11.0
@@ -12,7 +14,6 @@ require (
 )
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.3.7 // indirect
 	github.com/alecthomas/chroma v0.0.0-20181013211843-01e18834b5dd // indirect
 	github.com/danwakefield/fnmatch v0.0.0-20160403171240-cbb64ac3d964 // indirect
 	github.com/dlclark/regexp2 v1.1.6 // indirect
@@ -24,7 +25,6 @@ require (
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/magiconair/properties v1.8.0 // indirect
 	github.com/mattn/go-colorable v0.1.2 // indirect
-	github.com/mattn/go-isatty v0.0.8 // indirect
 	github.com/mattn/go-runewidth v0.0.3 // indirect
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
 	github.com/mitchellh/mapstructure v1.1.2 // indirect
