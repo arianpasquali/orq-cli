@@ -12,6 +12,13 @@ concurrency:
   group: release-${{ github.event.release.tag_name }}
   cancel-in-progress: false
 
+# Opt in to running JavaScript-based actions on Node 24 ahead of GitHub's
+# June 2026 default switch. Silences the "Node 20 actions are deprecated"
+# warning without waiting for checkout/setup-go/setup-node to ship new majors.
+# Once Node 24 becomes the default you can drop this block.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   release:
     # macOS runner so `codesign` is available for ad-hoc signing of the two
