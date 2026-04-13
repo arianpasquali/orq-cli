@@ -1,0 +1,23 @@
+{
+  "name": "@orq-ai/cli-darwin-x64",
+  "version": "0.0.0",
+  "description": "darwin-x64 binary for @orq-ai/cli",
+  "homepage": "https://github.com/orq-ai/orq-cli",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/orq-ai/orq-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/orq-ai/orq-cli/issues"
+  },
+  "license": "MIT",
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "files": [
+    "bin/orq"
+  ]
+}

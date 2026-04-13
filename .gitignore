@@ -12,3 +12,8 @@
 *.dylib
 *.test
 *.out
+
+# release-build.sh drops cross-compiled binaries here; only CI publishes them
+/npm/cli-*/bin/
+/npm/**/node_modules/
+*.tgz

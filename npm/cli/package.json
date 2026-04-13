@@ -1,0 +1,41 @@
+{
+  "name": "@orq-ai/cli",
+  "version": "0.0.0",
+  "description": "Official command-line interface for the orq.ai API",
+  "homepage": "https://github.com/orq-ai/orq-cli",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/orq-ai/orq-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/orq-ai/orq-cli/issues"
+  },
+  "license": "MIT",
+  "bin": {
+    "orq": "bin/orq.js"
+  },
+  "files": [
+    "bin/orq.js",
+    "README.md"
+  ],
+  "optionalDependencies": {
+    "@orq-ai/cli-darwin-arm64": "0.0.0",
+    "@orq-ai/cli-darwin-x64": "0.0.0",
+    "@orq-ai/cli-linux-x64": "0.0.0",
+    "@orq-ai/cli-linux-arm64": "0.0.0",
+    "@orq-ai/cli-win32-x64": "0.0.0"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "keywords": [
+    "orq",
+    "orq-ai",
+    "cli",
+    "ai",
+    "llm",
+    "llmops",
+    "prompts",
+    "agents"
+  ]
+}

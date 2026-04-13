@@ -6,13 +6,17 @@ import (
 	generated "orq/cli/generated"
 )
 
+// version is overwritten at release build time via
+// `-ldflags "-X main.version=<semver>"`. Local dev builds report "dev".
+var version = "dev"
+
 func main() {
 	bartolocli.Init(&bartolocli.Config{
 		AppName:             "orq",
 		EnvPrefix:           "ORQ",
 		APIKeyEnvVar:        "ORQ_API_KEY",
 		DefaultOutputFormat: "toon",
-		Version:             "0.1.0",
+		Version:             version,
 	})
 
 	generated.Register(bartolocli.Root)

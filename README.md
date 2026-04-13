@@ -1,175 +1,301 @@
-# orq.ai API
+# orq.ai CLI
 
-Generated CLI for the orq.ai API API.
+Official command-line interface for the [orq.ai](https://orq.ai) API.
 
-The examples below assume the compiled binary is named `orq`. If you install it under a different name, replace that in the commands below.
+Manage prompts, agents, deployments, knowledge bases, evaluators, and the rest of the orq.ai platform from your terminal, CI, or scripts. Works against orq.ai SaaS out of the box and against self-hosted deployments with a single flag.
 
-## First Run
+---
 
-Build the CLI:
+## Installation
+
+### npm (recommended)
 
 ```sh
+npm install -g @orq-ai/cli
+```
+
+Requires Node.js 14 or newer. The matching native binary is downloaded automatically for your platform; no postinstall scripts or network downloads at runtime.
+
+### curl | sh
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/orq-ai/orq-cli/main/install.sh | sh
+```
+
+Installs a raw binary to `~/.orq/bin/orq`. Pin a specific version or pick a different install directory:
+
+```sh
+# pin a version
+curl -fsSL https://raw.githubusercontent.com/orq-ai/orq-cli/main/install.sh | ORQ_CLI_VERSION=v0.1.0 sh
+
+# custom install dir (must be writable by the current user)
+curl -fsSL https://raw.githubusercontent.com/orq-ai/orq-cli/main/install.sh | ORQ_CLI_INSTALL_DIR=/usr/local/bin sh
+```
+
+### Pre-built release binaries
+
+Grab a binary for your platform from the [Releases page](https://github.com/orq-ai/orq-cli/releases). Assets are named `orq-<os>-<arch>[.exe]`.
+
+### Build from source
+
+Requires Go 1.23 or newer:
+
+```sh
+git clone https://github.com/orq-ai/orq-cli.git
+cd orq-cli
 make build
+./bin/orq --version
 ```
 
-Install it locally under `~/.local/bin`:
+---
+
+## Quick start
 
 ```sh
-make install-local
+orq auth login           # OAuth device login; picks an active workspace
+orq whoami               # verify identity
+orq workspace list       # see available workspaces
+orq prompts list         # run any generated command
+orq doctor               # diagnose auth, config, and endpoint reachability
 ```
 
-If you prefer shell scripts over `make`, the scaffold also includes:
-
-```sh
-./scripts/build.sh
-./scripts/install-local.sh
-```
-
-Refresh Bartolo-owned scaffold files after upgrading Bartolo or the schema:
-
-```sh
-bartolo sync
-```
-
-The scaffold also includes:
-
-- `.gitignore` for local binaries, env files, and editor noise
-- `.editorconfig` and `.gitattributes` for predictable formatting and line endings
-- `.env.example` with the default auth variable placeholder
-
-Check the generated setup before making requests:
-
-```sh
-orq --json doctor
-```
+---
 
 ## Authentication
 
-The generated CLI supports bearer token authentication from environment variables or a stored profile.
+The CLI supports two auth methods. Both respect `--profile <name>` so you can keep multiple identities (personal account, CI, self-hosted customer) side by side.
 
-Environment variables:
-- `ORQ_TOKEN`
-- `ORQ_API_KEY`
-- `ORQ_AUTHORIZATION`
-
-Project-local `.env` and `.env.local` files are loaded automatically if present.
-
-Profile setup:
+### OAuth device login (interactive)
 
 ```sh
-orq auth setup
+orq auth login
 ```
 
-## Command Surface
+This walks you through a browser-based device-authorization flow, writes credentials to `~/.orq/sessions/default.json`, and picks an active workspace. Re-running `orq auth login` refreshes the session. Sign out with `orq auth logout`.
 
-This CLI groups commands by product/resource noun inferred from the OpenAPI tags.
-- `orq agents --help` Agents
-- `orq chunking --help` Chunking
-- `orq contacts --help` Contacts
-- `orq datasets --help` Datasets
-- `orq deployments --help` Deployments
-- `orq evaluators --help` Evaluators
-- `orq feedback --help` Feedback
-- `orq files --help` Files
-- `orq router-guardrail-rules --help` Router Guardrail Rules
-- `orq human-review-sets --help` Human Review Sets
-- `orq human-evals --help` Human Evals
-- `orq identities --help` Identities
-- `orq knowledge-bases --help` Knowledge Bases
-- `orq memory-stores --help` Memory Stores
-- `orq models --help` Models
-- `orq router-policies --help` Router Policies
-- `orq prompts --help` Prompts
-- `orq remote-configs --help` Remote Configs
-- `orq audio --help` Audio
-- `orq chat --help` Chat
-- `orq completions --help` Completions
-- `orq embeddings --help` Embeddings
-- `orq images --help` Images
-- `orq moderations --help` Moderations
-- `orq router --help` Router
-- `orq rerank --help` Rerank
-- `orq responses --help` Responses
-- `orq router-routing-rules --help` Router Routing Rules
-- `orq tools --help` Tools
-- `orq annotations --help` Annotations
-
-## Examples
-
-### Check setup
-
-Verify config, auth source, and selected server before making API calls.
+### API key (headless / CI)
 
 ```sh
-orq --json doctor
+export ORQ_API_KEY=sk_live_...
+orq agents list
 ```
 
-### Inspect server defaults
-
-See the generated server targets and persist a default when the spec provides multiple environments.
+For multiple keys, save each one to a profile:
 
 ```sh
-orq server list
+orq auth add-profile apikey ci <api-key>
+orq --profile ci agents list
 ```
 
-### Persist the default output format
+---
 
-Write the preferred output format into the CLI config so future commands use it automatically.
+## Profiles
+
+Every command accepts `--profile <name>` (or the `ORQ_PROFILE` env var). Each profile has its own session file at `~/.orq/sessions/<name>.json` and its own API key credentials in `~/.orq/credentials.json`. The default profile is `default`.
+
+```sh
+# personal account against SaaS
+orq auth login
+
+# work account against SaaS
+orq --profile work auth login
+orq --profile work workspace use marketing
+orq --profile work prompts list
+
+# self-hosted customer
+orq --profile acme auth login --api-base-url https://orq.acme.internal
+orq --profile acme prompts list
+```
+
+After login, every command on that profile automatically routes to the host you authenticated against — you do not need to pass `--server` on subsequent calls. Override once with `--server <url>` or `ORQ_SERVER=<url>` when you need to talk to a different host.
+
+---
+
+## Workspaces
+
+```sh
+orq workspace list         # list workspaces available to the active identity
+orq workspace use <key>    # switch active workspace (persists in the session)
+orq whoami                 # current user + active workspace + URL config
+```
+
+---
+
+## Diagnostics
+
+```sh
+orq doctor
+orq doctor --json          # machine-readable
+```
+
+`doctor` reports:
+
+- CLI binary + runtime (version, platform/arch)
+- Active profile + session file path
+- Resolved `api_base_url`, `v1_base_url`, `auth_base_url`, `profile_base_url` with their *source* (flag, session, env, default, derived)
+- Auth status (authenticated / missing / invalid / unreadable), user email, active workspace
+- Reachability probes against each endpoint
+- Bootstrap token freshness
+
+---
+
+## Output formats
+
+```sh
+orq agents list                             # TOON (default, human-readable)
+orq agents list --output-format json        # JSON
+orq agents list --output-format yaml        # YAML
+orq agents list --json                      # shortcut for JSON
+orq agents list -q 'data[].display_name'    # JMESPath query
+```
+
+Persist a new default:
 
 ```sh
 orq default-format json
 ```
 
-### Explore a command group
+---
 
-Inspect the grouped product commands synthesized from the OpenAPI tags.
+## Command reference
 
-```sh
-orq agents --help
+### Built-in commands
+
+| Command | Purpose |
+|---|---|
+| `orq auth login` | OAuth device login |
+| `orq auth logout` | Revoke refresh token, clear local session |
+| `orq auth whoami` | Show current identity (alias: `orq whoami`) |
+| `orq auth add-profile apikey <name> <key>` | Save an API-key profile |
+| `orq auth list-profiles` | List configured credential profiles |
+| `orq workspace list` | List workspaces |
+| `orq workspace use <key>` | Switch active workspace |
+| `orq doctor` | Diagnose config, auth, reachability |
+| `orq request <method> <path>` | Raw API escape hatch (uses configured auth) |
+| `orq server list` | List OpenAPI-registered servers |
+| `orq completion bash\|zsh\|fish\|powershell` | Generate shell completions |
+| `orq default-format <json\|yaml\|toon>` | Persist a default output format |
+
+### Resource commands
+
+Use `--help` on any group for the full surface (inputs, body fields, examples):
+
+```text
+orq agents                   orq identities             orq rerank
+orq annotations              orq images                 orq responses
+orq audio                    orq knowledge-bases        orq router
+orq chat                     orq memory-stores          orq router-guardrail-rules
+orq chunking                 orq models                 orq router-policies
+orq completions              orq moderations            orq router-routing-rules
+orq contacts                 orq prompts                orq tools
+orq datasets                 orq remote-configs
+orq deployments              orq embeddings
+orq evaluators               orq feedback
+orq files                    orq human-evals
+orq human-review-sets
 ```
 
-### Run a grouped command
+---
 
-Replace any positional placeholders with real values from your environment.
+## Environment variables
+
+| Variable | Purpose |
+|---|---|
+| `ORQ_API_KEY` | API key for headless/CI auth |
+| `ORQ_PROFILE` | Default profile (same effect as `--profile`) |
+| `ORQ_SERVER` | Override generated-command base URL (same as `--server`) |
+| `ORQ_API_BASE_URL` | Override auth endpoint base URL (used by `auth login`, `whoami`, `workspace`) |
+| `ORQ_V1_BASE_URL` | Override v1 API base URL (advanced/local dev) |
+| `ORQ_PROFILE_BASE_URL` | Override profile endpoint (advanced/local dev) |
+| `ORQ_CLI_VERSION` | Version to install via `install.sh` |
+| `ORQ_CLI_INSTALL_DIR` | Install directory for `install.sh` |
+
+`.env` and `.env.local` files in the current directory are loaded automatically.
+
+---
+
+## Self-hosted orq.ai
 
 ```sh
-orq agents a2a
+orq --profile acme auth login --api-base-url https://orq.acme.internal
 ```
 
-### Use the raw escape hatch
-
-Call the API directly with configured auth when a high-level command is missing.
+The host is stored in the session and reused for every subsequent command on that profile. No configuration files, no per-command flag, no env vars. Switch back and forth between profiles without logging out of either:
 
 ```sh
-orq request get /v2/agents/a2a
+orq --profile acme prompts list            # talks to acme's backend
+orq --profile default prompts list         # talks to api.orq.ai
 ```
 
-The same generated examples are also written to `examples/README.md` for quick copy/paste references.
+---
 
-## Raw Request Escape Hatch
+## Development
 
-Use the built-in raw request command when a high-level command is missing:
+### Project layout
+
+```
+cmd/orq/main.go              entrypoint
+cli/generated/               bartolo-generated OpenAPI commands (DO NOT edit)
+cli/custom/
+├── register.go              custom entrypoint: middleware + commands
+├── auth/                    OAuth device-login client, session store, URL resolution
+└── commands/                cobra commands: auth, workspace, doctor, identity
+npm/
+├── cli/                     @orq-ai/cli wrapper (JS shim + optionalDependencies)
+└── cli-<os>-<arch>/         per-platform binary containers
+scripts/
+├── build.sh                 local dev build
+├── install-local.sh         install to ~/.local/bin
+└── release-build.sh         cross-compile all platforms + stamp version
+install.sh                    curl | sh installer
+.github/workflows/release.yml CI release workflow
+```
+
+### Common commands
 
 ```sh
-orq request get /path
-orq request post /path < body.json
+make build              # local dev binary at ./bin/orq
+make install-local      # install to ~/.local/bin/orq
+make completions        # generate shell completions into ./completions/
+make tidy               # go mod tidy
+make doctor             # run the doctor command
 ```
 
-## Custom Commands
+### Regenerating from OpenAPI
 
-Bartolo keeps generated and user-owned code separate:
+```sh
+bartolo sync
+```
 
-- CLI entrypoint: `cmd/orq/main.go`
-- Generated API code: `cli/generated/`
-- User-owned extensions: `cli/custom/`
-- Add your own commands or hook registrations inside `cli/custom/Register(...)` so regeneration does not overwrite your work.
+This wipes `cli/generated/` and rebuilds it from `openapi.json`. **`cli/custom/` is never touched** — bartolo detects the existing directory and skips the stub.
 
-## Output Conventions
+### Cutting a release
 
-- Prefer `--json` when you want machine-readable output.
-- Use `--help` on any command group or command to inspect flags and required args.
-- Use `help-input` when a command accepts a request body from stdin or CLI shorthand.
-- Use `server list`, `server use`, and `server set` to manage generated server defaults.
-- `make build` writes the binary to `./bin/orq`.
-- `make install-local` installs the binary to `~/.local/bin/orq` by default.
-- `make completions` writes shell completion files into `./completions/`.
+Releases are fully automated by `.github/workflows/release.yml`:
+
+1. Bump and push a tag: `git tag v0.1.1 && git push --tags`
+2. Create a [GitHub Release](https://github.com/orq-ai/orq-cli/releases/new) from that tag and publish it
+3. The workflow fires on `release: [published]` and:
+   - Cross-compiles 5 platform binaries (`darwin-arm64`, `darwin-x64`, `linux-x64`, `linux-arm64`, `win32-x64`)
+   - Ad-hoc signs the macOS binaries with `codesign -s -`
+   - Stamps the version into all 6 `package.json` files
+   - Publishes the 5 platform packages to npm (in that order)
+   - Publishes `@orq-ai/cli` wrapper to npm
+   - Uploads raw binaries to the GitHub Release as assets for `install.sh` to fetch
+
+Required repository secret:
+
+- `NPM_TOKEN` — an npm [automation token](https://docs.npmjs.com/creating-and-viewing-access-tokens) with publish access to the `@orq-ai` organization.
+
+To reproduce the release build locally (without publishing):
+
+```sh
+./scripts/release-build.sh 0.1.0
+ls npm/cli-*/bin/
+```
+
+---
+
+## License
+
+MIT — see [LICENSE](./LICENSE).

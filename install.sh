@@ -1,0 +1,151 @@
+#!/usr/bin/env sh
+#
+# install.sh — curl | sh installer for the orq.ai CLI.
+#
+# Usage:
+#   curl -fsSL https://raw.githubusercontent.com/orq-ai/orq-cli/main/install.sh | sh
+#
+# Environment:
+#   ORQ_CLI_VERSION       Pin a specific release (e.g. v0.1.0). Default: latest.
+#   ORQ_CLI_INSTALL_DIR   Install directory. Default: $HOME/.orq/bin.
+#
+# This script downloads a single raw binary from the GitHub Releases page for
+# this repository and drops it at $ORQ_CLI_INSTALL_DIR/orq. It does not touch
+# your shell profile; follow the PATH hint printed at the end if you need it.
+#
+# For Windows, install via npm instead:
+#   npm install -g @orq-ai/cli
+
+set -eu
+
+REPO="orq-ai/orq-cli"
+INSTALL_DIR="${ORQ_CLI_INSTALL_DIR:-$HOME/.orq/bin}"
+VERSION="${ORQ_CLI_VERSION:-}"
+
+err() {
+  echo "orq-cli installer: $*" >&2
+}
+
+require_cmd() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    err "required command not found: $1"
+    exit 1
+  fi
+}
+
+require_cmd curl
+require_cmd uname
+require_cmd mktemp
+require_cmd chmod
+require_cmd mv
+
+# --- Detect OS -------------------------------------------------------------
+
+uname_s="$(uname -s)"
+case "$uname_s" in
+  Darwin) os="darwin" ;;
+  Linux)  os="linux" ;;
+  MINGW*|MSYS*|CYGWIN*|Windows_NT)
+    err "Windows is not supported by this installer."
+    err "Install via npm instead: npm install -g @orq-ai/cli"
+    exit 1
+    ;;
+  *)
+    err "unsupported operating system: $uname_s"
+    exit 1
+    ;;
+esac
+
+# --- Detect architecture ---------------------------------------------------
+
+uname_m="$(uname -m)"
+case "$uname_m" in
+  x86_64|amd64)   arch="x64" ;;
+  arm64|aarch64)  arch="arm64" ;;
+  *)
+    err "unsupported architecture: $uname_m"
+    err "Supported: x86_64/amd64, arm64/aarch64"
+    exit 1
+    ;;
+esac
+
+# --- Resolve version -------------------------------------------------------
+
+if [ -z "$VERSION" ]; then
+  # GitHub's latest-release API returns JSON; awk out the tag_name field
+  # without requiring jq. The server responds in a stable order so this
+  # is safe across the board.
+  api_url="https://api.github.com/repos/$REPO/releases/latest"
+  VERSION="$(curl -fsSL "$api_url" 2>/dev/null | awk -F '"' '/"tag_name":/ {print $4; exit}')"
+
+  if [ -z "$VERSION" ]; then
+    err "failed to determine latest release from $api_url"
+    err "You can pin one explicitly: ORQ_CLI_VERSION=v0.1.0 sh install.sh"
+    exit 1
+  fi
+fi
+
+asset="orq-${os}-${arch}"
+download_url="https://github.com/$REPO/releases/download/${VERSION}/${asset}"
+
+echo "Installing orq ${VERSION} (${os}-${arch}) → ${INSTALL_DIR}/orq"
+
+# --- Download --------------------------------------------------------------
+
+tmp_file="$(mktemp -t orq-cli.XXXXXX)"
+cleanup() {
+  rm -f "$tmp_file"
+}
+trap cleanup EXIT INT TERM
+
+if ! curl -fSL --progress-bar -o "$tmp_file" "$download_url"; then
+  err "failed to download $download_url"
+  err "verify the release exists: https://github.com/$REPO/releases"
+  exit 1
+fi
+
+# Sanity-check that we actually downloaded a binary, not an HTML error page
+if [ ! -s "$tmp_file" ]; then
+  err "downloaded file is empty"
+  exit 1
+fi
+
+chmod +x "$tmp_file"
+
+# --- Install ---------------------------------------------------------------
+
+mkdir -p "$INSTALL_DIR"
+target="$INSTALL_DIR/orq"
+
+# Atomic replace so a partial install can't corrupt an existing binary.
+if ! mv "$tmp_file" "$target"; then
+  err "failed to move binary into $target"
+  err "does the user have write permission to $INSTALL_DIR?"
+  exit 1
+fi
+
+# --- Verify + PATH hint ----------------------------------------------------
+
+installed_version="$("$target" --version 2>/dev/null || echo '')"
+if [ -n "$installed_version" ]; then
+  echo "Installed: $installed_version"
+else
+  echo "Installed: $target"
+fi
+
+case ":$PATH:" in
+  *":$INSTALL_DIR:"*)
+    ;;
+  *)
+    echo
+    echo "NOTE: $INSTALL_DIR is not on your PATH."
+    echo
+    echo "Add this line to your shell profile (~/.zshrc, ~/.bashrc, etc.):"
+    echo
+    echo "  export PATH=\"$INSTALL_DIR:\$PATH\""
+    echo
+    ;;
+esac
+
+echo
+echo "Next: run 'orq auth login' to authenticate."
