@@ -79,30 +79,31 @@ done
 # @orq-ai/cli-* pin lines up with the wrapper's version.
 echo "Stamping version $VERSION into package.json files..."
 
-node --input-type=module -e "
-  import { readFileSync, writeFileSync } from 'node:fs';
-  import { globSync } from 'node:fs';
+VERSION="$VERSION" NPM_DIR="$NPM_DIR" node -e '
+  const fs = require("node:fs");
+  const version = process.env.VERSION;
+  const npmDir = process.env.NPM_DIR;
   const dirs = [
-    '$NPM_DIR/cli',
-    '$NPM_DIR/cli-darwin-arm64',
-    '$NPM_DIR/cli-darwin-x64',
-    '$NPM_DIR/cli-linux-x64',
-    '$NPM_DIR/cli-linux-arm64',
-    '$NPM_DIR/cli-win32-x64',
+    npmDir + "/cli",
+    npmDir + "/cli-darwin-arm64",
+    npmDir + "/cli-darwin-x64",
+    npmDir + "/cli-linux-x64",
+    npmDir + "/cli-linux-arm64",
+    npmDir + "/cli-win32-x64",
   ];
   for (const dir of dirs) {
-    const path = dir + '/package.json';
-    const pkg = JSON.parse(readFileSync(path, 'utf8'));
-    pkg.version = '$VERSION';
+    const path = dir + "/package.json";
+    const pkg = JSON.parse(fs.readFileSync(path, "utf8"));
+    pkg.version = version;
     if (pkg.optionalDependencies) {
       for (const key of Object.keys(pkg.optionalDependencies)) {
-        pkg.optionalDependencies[key] = '$VERSION';
+        pkg.optionalDependencies[key] = version;
       }
     }
-    writeFileSync(path, JSON.stringify(pkg, null, 2) + '\n');
-    console.log('  ' + path);
+    fs.writeFileSync(path, JSON.stringify(pkg, null, 2) + "\n");
+    console.log("  " + path);
   }
-"
+'
 
 echo ""
 echo "Done. Binaries and package.json files ready at version $VERSION."

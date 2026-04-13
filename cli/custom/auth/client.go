@@ -136,9 +136,9 @@ func (c *Client) AwaitDeviceApproval(deviceCode string, expiresIn, initialInterv
 // ============================================================================
 
 type Profile struct {
-	ID          string                   `json:"id"`
-	Email       string                   `json:"email"`
-	DisplayName string                   `json:"display_name"`
+	ID          string           `json:"id"`
+	Email       string           `json:"email"`
+	DisplayName string           `json:"display_name"`
 	Workspaces  []map[string]any `json:"workspaces"`
 	Preferences struct {
 		ActiveWorkspace string `json:"active_workspace"`
