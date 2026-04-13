@@ -331,18 +331,17 @@ func (c *Client) RefreshProfile(session *Session) (*Session, error) {
 }
 
 func (c *Client) EnsureWorkspaceToken(session *Session, workspaceKey string) (*Session, error) {
-	current, ok := session.WorkspaceTokens[workspaceKey]
-	if ok && !isExpired(current.ExpiresAt, 60) {
-		return session, nil
+	current, cached := session.WorkspaceTokens[workspaceKey]
+	if !cached || isExpired(current.ExpiresAt, 60) {
+		tok, err := c.ExchangeAccessToken(session.RefreshToken, workspaceKey)
+		if err != nil {
+			return nil, err
+		}
+		if session.WorkspaceTokens == nil {
+			session.WorkspaceTokens = map[string]StoredAccessToken{}
+		}
+		session.WorkspaceTokens[workspaceKey] = tok
 	}
-	tok, err := c.ExchangeAccessToken(session.RefreshToken, workspaceKey)
-	if err != nil {
-		return nil, err
-	}
-	if session.WorkspaceTokens == nil {
-		session.WorkspaceTokens = map[string]StoredAccessToken{}
-	}
-	session.WorkspaceTokens[workspaceKey] = tok
 	session.ActiveWorkspaceKey = stringPtr(workspaceKey)
 	if err := SaveSession(session); err != nil {
 		return nil, err
