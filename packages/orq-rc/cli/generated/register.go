@@ -38,6 +38,7 @@ func Register(root *cobra.Command) {
 	registermanagementKeysCommands(root)
 	registermemoryStoresCommands(root)
 	registermodelsCommands(root)
+	registernotifiersCommands(root)
 	registerpiiCommands(root)
 	registerpoliciesCommands(root)
 	registerprojectsCommands(root)
