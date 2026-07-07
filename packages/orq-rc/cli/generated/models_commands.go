@@ -1234,6 +1234,54 @@ func registermodelsCommands(root *cobra.Command) {
 		var examples string
 
 		cmd := &cobra.Command{
+			Use:     "import-litellm",
+			Short:   "Import models from LiteLLM",
+			Long:    bartolocli.Markdown("Bulk-imports a list of LiteLLM model definitions into the workspace model garden.\n\nRequest body: `application/json`. Provide it via stdin or CLI shorthand.\nRun `help-input` for body syntax details.\n\nTop-level type: `array | null`"),
+			Example: examples,
+			Args:    cobra.MinimumNArgs(0),
+			Run: func(cmd *cobra.Command, args []string) {
+				body, err := bartolocli.GetBody("application/json", args[0:], params, []string{})
+				if err != nil {
+					log.Fatal().Err(err).Msg("unable to get body")
+				}
+				body, err = bartolocli.ApplyBodyFlags(cmd, params, "application/json", body,
+					[]bartolocli.BodyField{},
+				)
+				if err != nil {
+					log.Fatal().Err(err).Msg("unable to apply body flags")
+				}
+
+				_, decoded, err := OpenapiModelLiteLLMImport(params, body)
+				if err != nil {
+					log.Fatal().Err(err).Msg("error calling operation")
+				}
+
+				if err := bartolocli.Formatter.Format(decoded); err != nil {
+					log.Fatal().Err(err).Msg("formatting failed")
+				}
+
+			},
+		}
+		modelsCmd.AddCommand(cmd)
+		bartolocli.AddBodyFlags(cmd)
+		bartolocli.AddBodyFieldFlags(cmd,
+			[]bartolocli.BodyField{},
+		)
+
+		bartolocli.SetCustomFlags(cmd)
+
+		if cmd.Flags().HasFlags() {
+			params.BindPFlags(cmd.Flags())
+		}
+
+	}()
+
+	func() {
+		params := viper.New()
+
+		var examples string
+
+		cmd := &cobra.Command{
 			Use:     "list",
 			Short:   "List models",
 			Long:    bartolocli.Markdown("Lists all available models for the workspace, including system and custom models with their enabled status."),
@@ -1276,6 +1324,40 @@ func registermodelsCommands(root *cobra.Command) {
 			Run: func(cmd *cobra.Command, args []string) {
 
 				_, decoded, err := OpenapiListModels(params)
+				if err != nil {
+					log.Fatal().Err(err).Msg("error calling operation")
+				}
+
+				if err := bartolocli.Formatter.Format(decoded); err != nil {
+					log.Fatal().Err(err).Msg("formatting failed")
+				}
+
+			},
+		}
+		modelsCmd.AddCommand(cmd)
+
+		bartolocli.SetCustomFlags(cmd)
+
+		if cmd.Flags().HasFlags() {
+			params.BindPFlags(cmd.Flags())
+		}
+
+	}()
+
+	func() {
+		params := viper.New()
+
+		var examples string
+
+		cmd := &cobra.Command{
+			Use:     "list-litellm",
+			Short:   "List models from configured LiteLLM instance",
+			Long:    bartolocli.Markdown("Fetches the list of models from the LiteLLM instance configured for the workspace. Requires a stored LiteLLM integration."),
+			Example: examples,
+			Args:    cobra.MinimumNArgs(0),
+			Run: func(cmd *cobra.Command, args []string) {
+
+				_, decoded, err := OpenapiModelListLitellm(params)
 				if err != nil {
 					log.Fatal().Err(err).Msg("error calling operation")
 				}
