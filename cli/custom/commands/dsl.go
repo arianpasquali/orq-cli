@@ -2,6 +2,9 @@ package commands
 
 import (
 	"errors"
+	"fmt"
+
+	"orq/cli/custom/dsl"
 
 	"github.com/spf13/cobra"
 )
@@ -56,11 +59,23 @@ func newDSLValidateCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "validate",
 		Short: "Validate manifests offline (schema, refs, vars) — no credentials needed",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return errNotImplemented
-		},
 	}
-	addStackFlags(cmd)
+	dir, varFile, cliVars := addStackFlags(cmd)
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		ms, _, errs := dsl.Validate(*dir, *varFile, *cliVars)
+		if len(errs) > 0 {
+			for _, e := range errs {
+				fmt.Fprintf(cmd.ErrOrStderr(), "✗ %s\n", e.Error())
+			}
+			return fmt.Errorf("%d validation error(s)", len(errs))
+		}
+		kinds := map[string]bool{}
+		for _, m := range ms {
+			kinds[m.Kind] = true
+		}
+		fmt.Fprintf(cmd.OutOrStdout(), "✓ %d manifests · %d kinds · schema ok · refs ok · vars ok\n", len(ms), len(kinds))
+		return nil
+	}
 	return cmd
 }
 
