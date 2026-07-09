@@ -3,6 +3,7 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"orq/cli/custom/dsl"
 
@@ -83,12 +84,43 @@ func newDSLPlanCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "plan",
 		Short: "Show the changes apply would make (exit 2 when changes are pending)",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return errNotImplemented
-		},
 	}
-	addStackFlags(cmd)
+	dir, varFile, cliVars := addStackFlags(cmd)
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		plan, err := buildPlanFromFlags(cmd, *dir, *varFile, *cliVars)
+		if err != nil {
+			return err
+		}
+		dsl.RenderPlan(cmd.OutOrStdout(), plan, true)
+		if plan.HasChanges() {
+			fmt.Fprintf(cmd.OutOrStdout(), "\nRun `orq dsl apply -f %s` to execute.\n", *dir)
+			os.Exit(2)
+		}
+		return nil
+	}
 	return cmd
+}
+
+// buildPlanFromFlags: shared validate→state→plan pipeline for plan/apply/destroy.
+func buildPlanFromFlags(cmd *cobra.Command, dir, varFile string, cliVars []string) (*dsl.PlanResult, error) {
+	ms, cfg, verrs := dsl.Validate(dir, varFile, cliVars)
+	if len(verrs) > 0 {
+		for _, e := range verrs {
+			fmt.Fprintf(cmd.ErrOrStderr(), "✗ %s\n", e.Error())
+		}
+		return nil, fmt.Errorf("%d validation error(s)", len(verrs))
+	}
+	client := dsl.NewClient()
+	st, stateID, err := dsl.LoadState(client, cfg.Stack)
+	if err != nil {
+		return nil, err
+	}
+	plan, err := dsl.BuildPlan(ms, cfg, client, st, stateID)
+	if err != nil {
+		return nil, err
+	}
+	plan.Config = cfg
+	return plan, nil
 }
 
 func newDSLApplyCommand() *cobra.Command {
