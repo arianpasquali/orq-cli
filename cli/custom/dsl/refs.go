@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 )
 
 // refTargets extracts the same-stack dependencies of a manifest as bare keys
@@ -216,9 +217,12 @@ func bareIdentityValue(ch Change) string {
 	return rest
 }
 
-// refResolver resolves "Kind/key" → server id at apply time.
+// refResolver resolves "Kind/key" → server id at apply time. Apply waves run
+// concurrent workers that both read (ResolveRefs) and write (after create),
+// so every access takes the mutex.
 type refResolver struct {
-	ids map[string]string // "Kind/bareKey" → server id
+	mu  sync.Mutex
+	ids map[string]string            // "Kind/bareKey" → server id
 	mcp map[string]map[string]string // Tool bareKey → discovered tool name → id
 }
 
@@ -226,17 +230,41 @@ func newRefResolver() *refResolver {
 	return &refResolver{ids: map[string]string{}, mcp: map[string]map[string]string{}}
 }
 
-func (r *refResolver) put(kind, bareKey, id string) { r.ids[kind+"/"+bareKey] = id }
+func (r *refResolver) put(kind, bareKey, id string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.ids[kind+"/"+bareKey] = id
+}
 
 func (r *refResolver) get(kind, bareKey string) (string, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if id, ok := r.ids[kind+"/"+bareKey]; ok && id != "" {
 		return id, nil
 	}
 	return "", fmt.Errorf("unresolved ref: no %s with key %q in stack or workspace", kind, bareKey)
 }
 
+func (r *refResolver) has(kind, bareKey string) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	_, ok := r.ids[kind+"/"+bareKey]
+	return ok
+}
+
 // putMCP records the discovered tools of an MCP Tool entity.
-func (r *refResolver) putMCP(bareKey string, discovered map[string]string) { r.mcp[bareKey] = discovered }
+func (r *refResolver) putMCP(bareKey string, discovered map[string]string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.mcp[bareKey] = discovered
+}
+
+func (r *refResolver) getMCP(bareKey string) (map[string]string, bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	d, ok := r.mcp[bareKey]
+	return d, ok
+}
 
 // ResolveRefs rewrites a manifest spec's symbolic refs into the API's id
 // shapes. Returns a deep copy; the manifest itself keeps its refs.
@@ -306,7 +334,7 @@ func ResolveRefs(m *Manifest, r *refResolver) (map[string]any, error) {
 				}
 				if typ == "mcp" {
 					names, _ := em["tools"].([]any)
-					discovered, ok := r.mcp[ref]
+					discovered, ok := r.getMCP(ref)
 					if !ok {
 						return nil, fmt.Errorf("%s: settings.tools[%d]: mcp tool %q is not applied yet or has no discovered tools", m.Identity(), i, ref)
 					}

@@ -35,9 +35,11 @@ func Execute(c *Client, p *PlanResult, out io.Writer, now func() time.Time) erro
 
 	for wi, wave := range p.Waves {
 		type result struct {
-			ch  Change
-			err error
-			msg string
+			ch     Change
+			err    error
+			msg    string
+			upsert *StateResource // state mutation, applied sequentially below
+			remove bool
 		}
 		results := make([]result, len(wave))
 		var wg sync.WaitGroup
@@ -52,13 +54,14 @@ func Execute(c *Client, p *PlanResult, out io.Writer, now func() time.Time) erro
 					results[i] = result{ch: ch, err: errSkipped, msg: "dependency failed: " + dep}
 					return
 				}
-				msg, err := executeChange(c, p, ch, now)
-				results[i] = result{ch: ch, err: err, msg: msg}
+				msg, upsert, remove, err := executeChange(c, p, ch, now)
+				results[i] = result{ch: ch, err: err, msg: msg, upsert: upsert, remove: remove}
 			}(i, ch)
 		}
 		wg.Wait()
 
-		// Sequential post-processing keeps state writes ordered.
+		// Sequential post-processing: state mutations and saves stay ordered
+		// and race-free (workers never touch StateDoc).
 		for _, r := range results {
 			glyph, color := opGlyph(r.ch.Op, pal)
 			switch {
@@ -70,8 +73,17 @@ func Execute(c *Client, p *PlanResult, out io.Writer, now func() time.Time) erro
 				fmt.Fprintf(out, "%swave %d%s  %s✗ %s%s  %v\n", pal.dim, wi+1, pal.reset, pal.del, r.ch.Identity, pal.reset, r.err)
 				failed[r.ch.Identity] = true
 				anyFailed = true
+				if r.remove { // replace: old deleted, new failed
+					st.Remove(r.ch.Kind, r.ch.Identity)
+					saveState()
+				}
 			default:
 				fmt.Fprintf(out, "%swave %d%s  %s%s %s%s  %s%s%s\n", pal.dim, wi+1, pal.reset, color, glyph, r.ch.Identity, pal.reset, pal.dim, r.msg, pal.reset)
+				if r.upsert != nil {
+					st.Upsert(*r.upsert)
+				} else if r.ch.Op == OpDelete {
+					st.Remove(r.ch.Kind, r.ch.Identity)
+				}
 				saveState()
 			}
 		}
@@ -119,51 +131,51 @@ func opGlyph(op Op, pal palette) (string, string) {
 	return "·", pal.dim
 }
 
-// executeChange performs one operation and records it in plan state.
-func executeChange(c *Client, p *PlanResult, ch Change, now func() time.Time) (string, error) {
+// executeChange performs one operation. It returns the state mutation for
+// the caller to apply sequentially: an upsert record, or remove=true when the
+// (kind, identity) entry must be dropped even on failure (replace half-done).
+// It must NOT touch p.State itself — it runs concurrently within a wave.
+func executeChange(c *Client, p *PlanResult, ch Change, now func() time.Time) (string, *StateResource, bool, error) {
 	info, err := Lookup(ch.Kind)
 	if err != nil {
-		return "", err
+		return "", nil, false, err
 	}
-	st := p.State
 	start := now()
 
 	switch ch.Op {
 	case OpCreate:
 		id, err := createResource(c, p, ch, info)
 		if err != nil {
-			return "", err
+			return "", nil, false, err
 		}
-		st.Upsert(newStateResource(ch, id, now))
-		return fmt.Sprintf("created %s (%s)", id, since(start, now)), nil
+		r := newStateResource(ch, id, now)
+		return fmt.Sprintf("created %s (%s)", id, since(start, now)), &r, false, nil
 
 	case OpUpdate:
 		if err := updateResource(c, p, ch, info); err != nil {
-			return "", err
+			return "", nil, false, err
 		}
-		st.Upsert(newStateResource(ch, ch.LiveID, now))
-		return fmt.Sprintf("updated (%s)", since(start, now)), nil
+		r := newStateResource(ch, ch.LiveID, now)
+		return fmt.Sprintf("updated (%s)", since(start, now)), &r, false, nil
 
 	case OpReplace:
 		if err := deleteResource(c, info, ch.LiveID, ch); err != nil && !IsNotFound(err) {
-			return "", fmt.Errorf("replace/delete: %w", err)
+			return "", nil, false, fmt.Errorf("replace/delete: %w", err)
 		}
 		id, err := createResource(c, p, ch, info)
 		if err != nil {
-			st.Remove(ch.Kind, ch.Identity) // old is gone, new failed
-			return "", fmt.Errorf("replace/create: %w", err)
+			return "", nil, true, fmt.Errorf("replace/create: %w", err)
 		}
-		st.Upsert(newStateResource(ch, id, now))
-		return fmt.Sprintf("replaced → %s (%s)", id, since(start, now)), nil
+		r := newStateResource(ch, id, now)
+		return fmt.Sprintf("replaced → %s (%s)", id, since(start, now)), &r, false, nil
 
 	case OpDelete:
 		if err := deleteResource(c, info, ch.LiveID, ch); err != nil && !IsNotFound(err) {
-			return "", err
+			return "", nil, false, err
 		}
-		st.Remove(ch.Kind, ch.Identity)
-		return fmt.Sprintf("deleted (%s)", since(start, now)), nil
+		return fmt.Sprintf("deleted (%s)", since(start, now)), nil, false, nil
 	}
-	return "", nil
+	return "", nil, false, nil
 }
 
 func newStateResource(ch Change, id string, now func() time.Time) StateResource {

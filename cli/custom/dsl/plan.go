@@ -124,7 +124,7 @@ func BuildPlan(ms []Manifest, cfg StackConfig, c *Client, st *StateDoc, stateID 
 	// live workspace resource already registered with the resolver.
 	for i := range ms {
 		for _, ref := range extractRefs(&ms[i]) {
-			if _, ok := res.Resolver.ids[ref.Kind+"/"+ref.Key]; ok {
+			if res.Resolver.has(ref.Kind, ref.Key) {
 				continue
 			}
 			found := false
