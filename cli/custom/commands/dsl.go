@@ -205,7 +205,8 @@ func newDSLPullCommand() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&project, "project", "", "Project to pull (name)")
-	cmd.Flags().StringVarP(&outDir, "out", "o", ".", "Output directory")
+	// no -o shorthand: bartolo's root command owns -o (output format)
+	cmd.Flags().StringVar(&outDir, "out", ".", "Output directory")
 	cmd.Flags().StringVar(&stack, "stack", "", "Stack whose state should inform paths/identities")
 	return cmd
 }

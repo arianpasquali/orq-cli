@@ -1,0 +1,72 @@
+# orq Workspace DSL documentation.
+#   uvx --with mkdocs-material mkdocs serve    → live reload
+#   uvx --with mkdocs-material mkdocs build --strict
+site_name: orq Workspace DSL
+site_description: Declarative provisioning for orq.ai workspaces — validate, plan, apply, pull, destroy.
+copyright: Built by <a href="https://orq.ai" target="_blank" rel="noopener">Orq.ai</a>
+docs_dir: docs
+site_dir: site
+use_directory_urls: true
+
+exclude_docs: |
+  transcripts/
+
+theme:
+  name: material
+  language: en
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: teal
+      toggle: { icon: material/weather-night, name: Dark mode }
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: teal
+      toggle: { icon: material/weather-sunny, name: Light mode }
+  features:
+    - navigation.instant
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - toc.follow
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Quickstart: quickstart.md
+  - Architecture: architecture.md
+  - Manifests:
+      - Overview: manifests/index.md
+      - Project: manifests/project.md
+      - Prompt: manifests/prompt.md
+      - Agent: manifests/agent.md
+      - Evaluator: manifests/evaluator.md
+      - KnowledgeBase: manifests/knowledge-base.md
+      - Dataset: manifests/dataset.md
+      - Tool: manifests/tool.md
+      - MemoryStore: manifests/memory-store.md
+      - Skill: manifests/skill.md
+  - CLI reference: cli.md
+  - Guides:
+      - New stack from scratch: guide/new-stack.md
+      - Migrate an existing workspace: guide/migrate-pull.md
+      - CI / GitOps: guide/ci-gitops.md
+      - Multi-environment: guide/multi-env.md
+  - Use cases: use-cases.md
+  - State internals: state-internals.md
+  - Limitations & platform asks: limitations.md
