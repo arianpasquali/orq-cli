@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	"orq/cli/custom/dsl"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
 )
 
@@ -128,12 +130,34 @@ func newDSLApplyCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "apply",
 		Short: "Reconcile the workspace to match the manifests",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return errNotImplemented
-		},
 	}
-	addStackFlags(cmd)
+	dir, varFile, cliVars := addStackFlags(cmd)
 	cmd.Flags().BoolVar(&autoApprove, "auto-approve", false, "Skip the confirmation prompt")
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		plan, err := buildPlanFromFlags(cmd, *dir, *varFile, *cliVars)
+		if err != nil {
+			return err
+		}
+		dsl.RenderPlan(cmd.OutOrStdout(), plan, true)
+		if !plan.HasChanges() {
+			return nil
+		}
+		total := plan.Creates + plan.Updates + plan.Deletes + plan.Replaces
+		if !autoApprove {
+			ok := false
+			prompt := &survey.Confirm{Message: fmt.Sprintf("Apply these %d changes?", total)}
+			if err := survey.AskOne(prompt, &ok); err != nil || !ok {
+				return errors.New("apply cancelled")
+			}
+		}
+		fmt.Fprintln(cmd.OutOrStdout())
+		if err := dsl.Execute(dsl.NewClient(), plan, cmd.OutOrStdout(), time.Now); err != nil {
+			return err
+		}
+		fmt.Fprintf(cmd.OutOrStdout(), "\nApply complete: %d created, %d updated, %d deleted, %d replaced.\n",
+			plan.Creates, plan.Updates, plan.Deletes, plan.Replaces)
+		return nil
+	}
 	return cmd
 }
 
@@ -156,12 +180,51 @@ func newDSLDestroyCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "destroy",
 		Short: "Delete every resource owned by the stack (reverse dependency order)",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return errNotImplemented
-		},
 	}
-	addStackFlags(cmd)
+	dir, varFile, cliVars := addStackFlags(cmd)
+	_ = varFile
+	_ = cliVars
 	cmd.Flags().BoolVar(&autoApprove, "auto-approve", false, "Skip the confirmation prompt")
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		cfg, err := dsl.LoadStack(*dir)
+		if err != nil {
+			return err
+		}
+		client := dsl.NewClient()
+		st, stateID, err := dsl.LoadState(client, cfg.Stack)
+		if err != nil {
+			return err
+		}
+		if st == nil || len(st.Resources) == 0 {
+			fmt.Fprintf(cmd.OutOrStdout(), "Stack %s owns nothing. Nothing to destroy.\n", cfg.Stack)
+			return nil
+		}
+		plan, err := dsl.DestroyPlan(cfg, st, stateID)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(cmd.OutOrStdout(), "Stack %s owns %d resources:\n", cfg.Stack, len(st.Resources))
+		for _, r := range st.Resources {
+			fmt.Fprintf(cmd.OutOrStdout(), "  − %s\n", r.Identity)
+		}
+		if !autoApprove {
+			var typed string
+			prompt := &survey.Input{Message: "Type the stack name to confirm destruction:"}
+			if err := survey.AskOne(prompt, &typed); err != nil || typed != cfg.Stack {
+				return errors.New("destroy cancelled (stack name mismatch)")
+			}
+		}
+		fmt.Fprintln(cmd.OutOrStdout())
+		execErr := dsl.Execute(client, plan, cmd.OutOrStdout(), time.Now)
+		if execErr != nil {
+			return execErr
+		}
+		if err := dsl.DeleteState(client, plan.StateID); err != nil {
+			return fmt.Errorf("resources destroyed but state skill removal failed: %w", err)
+		}
+		fmt.Fprintf(cmd.OutOrStdout(), "\nDestroyed %d resources. Stack state removed.\n", plan.Deletes)
+		return nil
+	}
 	return cmd
 }
 
@@ -173,11 +236,23 @@ func newDSLStateCommand() *cobra.Command {
 	list := &cobra.Command{
 		Use:   "list",
 		Short: "Print the stack inventory",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return errNotImplemented
-		},
 	}
-	addStackFlags(list)
+	dir, _, _ := addStackFlags(list)
+	list.RunE = func(cmd *cobra.Command, args []string) error {
+		cfg, err := dsl.LoadStack(*dir)
+		if err != nil {
+			return err
+		}
+		st, _, err := dsl.LoadState(dsl.NewClient(), cfg.Stack)
+		if err != nil {
+			return err
+		}
+		if st == nil {
+			fmt.Fprintf(cmd.OutOrStdout(), "Stack %s has never been applied (no state).\n", cfg.Stack)
+			return nil
+		}
+		return emit(st)
+	}
 	cmd.AddCommand(list)
 	return cmd
 }
