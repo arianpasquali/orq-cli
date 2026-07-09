@@ -34,8 +34,6 @@ func NewDSLCommand() *cobra.Command {
 	return cmd
 }
 
-var errNotImplemented = errors.New("not implemented yet")
-
 // addStackFlags wires the flags shared by every command that reads a stack
 // directory. Returned pointers stay valid for the command's RunE closure.
 func addStackFlags(cmd *cobra.Command) (dir *string, varFile *string, cliVars *[]string) {
@@ -46,15 +44,24 @@ func addStackFlags(cmd *cobra.Command) (dir *string, varFile *string, cliVars *[
 }
 
 func newDSLInitCommand() *cobra.Command {
-	var stack string
+	var stack, dir string
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Scaffold orq.yaml and an example manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return errNotImplemented
+			files, err := dsl.Init(dir, stack)
+			if err != nil {
+				return err
+			}
+			for _, f := range files {
+				fmt.Fprintf(cmd.OutOrStdout(), "created  %s\n", f)
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "\nnext:\n  orq dsl validate -f %s\n  orq dsl plan -f %s\n", dir, dir)
+			return nil
 		},
 	}
 	cmd.Flags().StringVar(&stack, "stack", "", "Stack name (default: directory name)")
+	cmd.Flags().StringVarP(&dir, "file", "f", ".", "Directory to scaffold")
 	return cmd
 }
 
@@ -162,16 +169,44 @@ func newDSLApplyCommand() *cobra.Command {
 }
 
 func newDSLPullCommand() *cobra.Command {
-	var project, outDir string
+	var project, outDir, stack string
 	cmd := &cobra.Command{
 		Use:   "pull",
 		Short: "Serialize live workspace resources into manifest files",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return errNotImplemented
+			client := dsl.NewClient()
+			var st *dsl.StateDoc
+			if stack != "" {
+				var err error
+				st, _, err = dsl.LoadState(client, stack)
+				if err != nil {
+					return err
+				}
+			}
+			defaultPath := project
+			if defaultPath == "" {
+				defaultPath = "Default"
+			}
+			report, err := dsl.Pull(client, project, outDir, st, defaultPath)
+			if err != nil {
+				return err
+			}
+			for _, f := range report.Written {
+				fmt.Fprintf(cmd.OutOrStdout(), "written  %s\n", f)
+			}
+			for _, w := range report.Warnings {
+				fmt.Fprintf(cmd.OutOrStdout(), "⚠ %s\n", w)
+			}
+			for _, s := range report.Skipped {
+				fmt.Fprintf(cmd.OutOrStdout(), "skipped  %s (outside --project scope)\n", s)
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "\npulled %d resources → %s\n", len(report.Written), outDir)
+			return nil
 		},
 	}
 	cmd.Flags().StringVar(&project, "project", "", "Project to pull (name)")
 	cmd.Flags().StringVarP(&outDir, "out", "o", ".", "Output directory")
+	cmd.Flags().StringVar(&stack, "stack", "", "Stack whose state should inform paths/identities")
 	return cmd
 }
 
