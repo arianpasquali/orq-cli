@@ -16,6 +16,8 @@ type Manifest struct {
 	Line int    `yaml:"-"`
 	// HasSecrets marks manifests that referenced ${env.*} at load time.
 	HasSecrets bool `yaml:"-"`
+	// absDir is the stack root File is relative to (for $file resolution).
+	absDir string
 }
 
 // Metadata carries the declarative identity. Exactly one identity field is

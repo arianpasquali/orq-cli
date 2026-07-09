@@ -104,6 +104,7 @@ func parseManifestFile(path string, cfg StackConfig) ([]Manifest, []ValidationEr
 			continue
 		}
 		m.File, m.Line = rel, docLine(&node)
+		m.absDir = cfg.Dir
 		if es := checkEnvelope(&m, cfg); len(es) > 0 {
 			errs = append(errs, es...)
 			continue
