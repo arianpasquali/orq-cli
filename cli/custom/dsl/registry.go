@@ -41,82 +41,79 @@ type KindInfo struct {
 	Gated string // non-empty = human explanation
 }
 
+// commonStrip lists ONLY server-computed fields. Real spec fields
+// (description, type, status, retrieval_settings, ...) are never stripped —
+// the managed-fields differ ignores live-only fields anyway; stripping exists
+// so pull doesn't serialize server noise and so identity/envelope fields
+// don't collide with spec.
 var commonStrip = []string{
 	"_id", "id", "created", "updated", "created_at", "updated_at",
 	"created_by_id", "updated_by_id", "owner", "domain_id", "workspace_id",
-	"project_id", "version", "status", "metrics", "type", "object",
+	"project_id", "metrics", "object",
+	// envelope-managed (never part of spec):
+	"key", "name", "display_name", "path",
 }
 
-// strip returns commonStrip minus keep, plus extra.
-func strip(keep []string, extra ...string) []string {
-	keepSet := map[string]bool{}
-	for _, k := range keep {
-		keepSet[k] = true
-	}
-	var out []string
-	for _, s := range commonStrip {
-		if !keepSet[s] {
-			out = append(out, s)
-		}
-	}
-	return append(out, extra...)
+// strip returns commonStrip plus extra.
+func strip(extra ...string) []string {
+	return append(append([]string(nil), commonStrip...), extra...)
 }
 
 var registry = map[string]KindInfo{
 	"Project": {
 		Kind: "Project", Plural: "projects", BasePath: "/v2/projects", Tier: 0,
 		IdentityMode: "name", IDField: "project_id", Wrap: "project",
-		Strip: strip(nil, "is_archived", "is_default", "teams", "key"),
+		Strip: strip("is_archived", "is_default"),
 	},
 	"Prompt": {
 		Kind: "Prompt", Plural: "prompts", BasePath: "/v2/prompts", Tier: 1,
 		IdentityMode: "display_name", ReadHasPath: false, IDField: "_id",
 		Required: []string{"prompt.messages"},
-		Strip:    strip(nil, "prompt_config", "display_name", "description", "metadata"),
+		Strip:    strip("prompt_config", "type"),
 	},
 	"Agent": {
 		Kind: "Agent", Plural: "agents", BasePath: "/v2/agents", Tier: 2,
 		IdentityMode: "key", GetByIdentity: true, ReadHasPath: true, IDField: "_id",
 		Required: []string{"role", "description", "instructions", "model", "settings"},
-		Strip:    strip(nil, "source", "key", "display_name", "path"),
+		Strip:    strip("source", "status", "version", "type"),
 	},
 	"Evaluator": {
 		Kind: "Evaluator", Plural: "evaluators", BasePath: "/v2/evaluators", Tier: 1,
 		IdentityMode: "key", ReadHasPath: false, IDField: "_id",
 		Required: []string{"type"},
-		Strip:    strip([]string{"type"}, "key", "description"),
+		Strip:    strip(),
 	},
 	"KnowledgeBase": {
 		Kind: "KnowledgeBase", Plural: "knowledge-bases", BasePath: "/v2/knowledge", Tier: 1,
 		IdentityMode: "key", ReadHasPath: true, IDField: "_id",
 		Immutable: []string{"embedding_model"},
 		Secret:    []string{"external_config.api_key"},
-		Strip:     strip([]string{"type"}, "key", "description", "path", "model"),
+		Strip:     strip("model"),
 	},
 	"Dataset": {
 		Kind: "Dataset", Plural: "datasets", BasePath: "/v2/datasets", Tier: 1,
 		IdentityMode: "display_name", ReadHasPath: false, IDField: "_id",
-		Strip: strip(nil, "display_name", "metadata"),
+		Strip: strip("metadata"),
 	},
 	"Tool": {
 		Kind: "Tool", Plural: "tools", BasePath: "/v2/tools", Tier: 1,
 		IdentityMode: "key", ReadHasPath: true, IDField: "_id",
 		Required: []string{"type", "description"},
 		Secret:   []string{"mcp.headers.*"},
-		Strip:    strip([]string{"type", "status"}, "key", "display_name", "path", "description"),
+		Strip:    strip("version"),
 	},
 	"MemoryStore": {
 		Kind: "MemoryStore", Plural: "memory-stores", BasePath: "/v2/memory-stores", Tier: 1,
 		IdentityMode: "key", GetByIdentity: true, ReadHasPath: false, IDField: "_id",
 		Required:  []string{"description", "embedding_config"},
 		Immutable: []string{"embedding_config"},
-		Strip:     strip(nil, "key", "description"),
+		Strip:     strip(),
 	},
 	"Skill": {
 		Kind: "Skill", Plural: "skills", BasePath: "/v2/skills", Tier: 1,
 		IdentityMode: "display_name", GetByIdentity: true, ReadHasPath: true,
 		IDField: "skill_id", Wrap: "skill",
-		Strip:   strip(nil, "display_name", "path", "tags", "description", "skill_id"),
+		Strip:   strip("skill_id", "version"),
 	},
 	"Deployment": {
 		Kind: "Deployment", Plural: "deployments", BasePath: "/v2/deployments", Tier: 2,
