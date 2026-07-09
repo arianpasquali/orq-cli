@@ -184,3 +184,52 @@ func TestDestroyReverseOrder(t *testing.T) {
 		t.Errorf("state skill survives: %d", n)
 	}
 }
+
+func TestApplyAdoptsUnchangedLiveResources(t *testing.T) {
+	// First apply creates everything with state.
+	sim := NewSimulator()
+	_, c, _ := applyFixture(t, sim, nil, "")
+
+	// Simulate a fresh team: delete the state skill, keep the resources.
+	st, stateID, err := LoadState(c, "test-stack")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := DeleteState(c, stateID); err != nil {
+		t.Fatal(err)
+	}
+
+	// Plan from zero state: everything matches live → all noop → adoptions.
+	dir, cfg := planStack(t)
+	ms, _, _ := Validate(dir, "", nil)
+	plan, err := BuildPlan(ms, cfg, c, nil, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.HasChanges() {
+		var buf bytes.Buffer
+		RenderPlan(&buf, plan, false)
+		t.Fatalf("expected clean plan:\n%s", buf.String())
+	}
+	if len(plan.Adoptions) != 4 {
+		t.Fatalf("adoptions = %d, want 4", len(plan.Adoptions))
+	}
+
+	var out bytes.Buffer
+	if err := Execute(c, plan, &out, fixedNow()); err != nil {
+		t.Fatalf("%v\n%s", err, out.String())
+	}
+	if !strings.Contains(out.String(), "adopted") {
+		t.Errorf("no adoption output:\n%s", out.String())
+	}
+
+	// State now owns everything again; destroy would work.
+	st, _, err = LoadState(c, "test-stack")
+	if err != nil || st == nil {
+		t.Fatal(err)
+	}
+	if len(st.Resources) != 4 {
+		t.Fatalf("adopted state: %+v", st.Resources)
+	}
+	_ = stateID
+}

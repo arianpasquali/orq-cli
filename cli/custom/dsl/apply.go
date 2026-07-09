@@ -33,6 +33,15 @@ func Execute(c *Client, p *PlanResult, out io.Writer, now func() time.Time) erro
 		p.StateID = id
 	}
 
+	// Adopt unchanged live resources into state first (no API writes).
+	if len(p.Adoptions) > 0 {
+		for _, ch := range p.Adoptions {
+			st.Upsert(newStateResource(ch, ch.LiveID, now))
+			fmt.Fprintf(out, "%sadopted%s  %s  %sunchanged, now stack-owned%s\n", pal.dim, pal.reset, ch.Identity, pal.dim, pal.reset)
+		}
+		saveState()
+	}
+
 	for wi, wave := range p.Waves {
 		type result struct {
 			ch     Change

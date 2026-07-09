@@ -146,11 +146,14 @@ func newDSLApplyCommand() *cobra.Command {
 			return err
 		}
 		dsl.RenderPlan(cmd.OutOrStdout(), plan, true)
-		if !plan.HasChanges() {
+		if len(plan.Adoptions) > 0 {
+			fmt.Fprintf(cmd.OutOrStdout(), "%d unchanged live resource(s) will be adopted into stack state.\n", len(plan.Adoptions))
+		}
+		if !plan.HasChanges() && len(plan.Adoptions) == 0 {
 			return nil
 		}
 		total := plan.Creates + plan.Updates + plan.Deletes + plan.Replaces
-		if !autoApprove {
+		if !autoApprove && total > 0 {
 			ok := false
 			prompt := &survey.Confirm{Message: fmt.Sprintf("Apply these %d changes?", total)}
 			if err := survey.AskOne(prompt, &ok); err != nil || !ok {

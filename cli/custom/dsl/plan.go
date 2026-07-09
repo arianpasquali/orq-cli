@@ -16,6 +16,9 @@ type PlanResult struct {
 	State    *StateDoc
 	StateID  string
 	Resolver *refResolver
+	// Adoptions: unchanged live resources not yet in state; apply records
+	// them (state-only writes, no API mutation).
+	Adoptions []Change
 
 	Creates, Updates, Deletes, Replaces int
 }
@@ -156,6 +159,15 @@ func BuildPlan(ms []Manifest, cfg StackConfig, c *Client, st *StateDoc, stateID 
 				}
 				res.Resolver.put(ref.Kind, ref.Key, id)
 			}
+		}
+	}
+
+	// Adoption: live resources that match their manifest (noop) but are
+	// missing from state get recorded at apply time — this is how a pulled
+	// workspace becomes stack-owned without any API write.
+	for _, ch := range changes {
+		if ch.Op == OpNoop && ch.LiveID != "" && res.State.Find(ch.Kind, ch.Identity) == nil {
+			res.Adoptions = append(res.Adoptions, ch)
 		}
 	}
 
