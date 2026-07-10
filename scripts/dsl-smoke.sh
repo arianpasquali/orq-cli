@@ -32,7 +32,7 @@ export SMOKE_LINEAR_KEY="not-a-real-token"
 
 step "init"
 mkdir -p "$STACK_DIR"
-expect_exit 0 "$BIN" dsl init -f "$STACK_DIR" --stack orq-dsl-smoke
+expect_exit 0 "$BIN" stack init -f "$STACK_DIR" --stack orq-dsl-smoke --project orq-dsl-smoke
 rm "$STACK_DIR/agents/example-agent.yaml"
 
 step "write smoke stack (9 kinds)"
@@ -172,48 +172,51 @@ spec:
 YAML
 
 step "validate"
+expect_exit 0 "$BIN" stack validate -f "$STACK_DIR"
+
+step "validate via legacy alias (orq dsl)"
 expect_exit 0 "$BIN" dsl validate -f "$STACK_DIR"
 
 step "plan #1 — everything is new (expect exit 2)"
-expect_exit 2 "$BIN" dsl plan -f "$STACK_DIR"
+expect_exit 2 "$BIN" stack plan -f "$STACK_DIR"
 
 step "apply #1"
-expect_exit 0 "$BIN" dsl apply -f "$STACK_DIR" --auto-approve
+expect_exit 0 "$BIN" stack apply -f "$STACK_DIR" --auto-approve
 
 step "plan #2 — idempotence (expect exit 0, no changes)"
-expect_exit 0 "$BIN" dsl plan -f "$STACK_DIR"
+expect_exit 0 "$BIN" stack plan -f "$STACK_DIR"
 
 step "mutate: agent instructions + evaluator prompt"
 perl -pi -e 's/You are the smoke-test companion./You are the UPDATED smoke-test companion./' "$STACK_DIR/agent.yaml"
 perl -pi -e 's/Rate 0..1:/Rate strictly 0..1:/' "$STACK_DIR/evals.yaml"
 
 step "plan #3 — drift (expect exit 2, two updates)"
-expect_exit 2 "$BIN" dsl plan -f "$STACK_DIR"
+expect_exit 2 "$BIN" stack plan -f "$STACK_DIR"
 
 step "apply #2"
-expect_exit 0 "$BIN" dsl apply -f "$STACK_DIR" --auto-approve
-expect_exit 0 "$BIN" dsl plan -f "$STACK_DIR"
+expect_exit 0 "$BIN" stack apply -f "$STACK_DIR" --auto-approve
+expect_exit 0 "$BIN" stack plan -f "$STACK_DIR"
 
 step "pull → fresh dir, then round-trip plan (expect no changes)"
 mkdir -p "$PULL_DIR"
-expect_exit 0 "$BIN" dsl pull --project orq-dsl-smoke --stack orq-dsl-smoke --out "$PULL_DIR"
+expect_exit 0 "$BIN" stack pull --project orq-dsl-smoke --stack orq-dsl-smoke --out "$PULL_DIR"
 cp "$STACK_DIR/orq.yaml" "$PULL_DIR/orq.yaml"
 cp "$STACK_DIR/project.yaml" "$PULL_DIR/project.yaml"
 export SMOKE_LINEAR_AUTHORIZATION="Bearer not-a-real-token"
 export SMOKE_COMPANION_DUMMY=1
 # redaction placeholder is ${env.SMOKE_LINEAR_AUTHORIZATION}
-expect_exit 0 "$BIN" dsl plan -f "$PULL_DIR"
+expect_exit 0 "$BIN" stack plan -f "$PULL_DIR"
 
 step "remove dataset manifest → plan shows delete → apply"
 rm "$STACK_DIR/dataset.yaml"
-expect_exit 2 "$BIN" dsl plan -f "$STACK_DIR"
-expect_exit 0 "$BIN" dsl apply -f "$STACK_DIR" --auto-approve
+expect_exit 2 "$BIN" stack plan -f "$STACK_DIR"
+expect_exit 0 "$BIN" stack apply -f "$STACK_DIR" --auto-approve
 
 step "state list"
-expect_exit 0 "$BIN" dsl state list -f "$STACK_DIR"
+expect_exit 0 "$BIN" stack state list -f "$STACK_DIR"
 
 step "destroy"
-expect_exit 0 "$BIN" dsl destroy -f "$STACK_DIR" --auto-approve
+expect_exit 0 "$BIN" stack destroy -f "$STACK_DIR" --auto-approve
 
 step "DONE — dry smoke passed"
 exit 0

@@ -155,6 +155,12 @@ func executeChange(c *Client, p *PlanResult, ch Change, now func() time.Time) (s
 	case OpCreate:
 		id, err := createResource(c, p, ch, info)
 		if err != nil {
+			// Keys are workspace-unique but reads are project-scoped: plan can
+			// GET a 404 for a key living in a project this API key cannot see,
+			// and the create then collides. Explain instead of baffling.
+			if api, ok := err.(*APIError); ok && api.Status == 409 {
+				err = fmt.Errorf("%w — %s identities are workspace-unique, but this API key only sees its own project(s); the name is taken elsewhere. Pick a unique identity (prefix it with the stack name) or pull/adopt the existing resource", err, ch.Kind)
+			}
 			return "", nil, false, err
 		}
 		r := newStateResource(ch, id, now)
@@ -321,8 +327,15 @@ func updateTarget(ch Change, info KindInfo) string {
 
 func deleteResource(c *Client, info KindInfo, liveID string, ch Change) error {
 	target := liveID
-	if info.GetByIdentity && target == "" && ch.Manifest != nil {
-		target = ch.Manifest.IdentityValue()
+	if info.GetByIdentity {
+		// Key-addressed kinds DELETE by identity value — the API has no
+		// /{server_id} route for them, and a DELETE on the wrong path 404s,
+		// which the idempotency swallow below would silently mask.
+		if ch.Manifest != nil {
+			target = ch.Manifest.IdentityValue()
+		} else {
+			target = strings.TrimPrefix(ch.Identity, ch.Kind+"/")
+		}
 	}
 	if target == "" {
 		return nil // nothing to delete

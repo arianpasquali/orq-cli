@@ -105,7 +105,7 @@ spec: { description: Demo }
 
 func TestInitScaffoldAndRefuse(t *testing.T) {
 	dir := t.TempDir()
-	files, err := Init(dir, "my-stack")
+	files, err := Init(dir, "my-stack", "shared-project")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,14 +116,17 @@ func TestInitScaffoldAndRefuse(t *testing.T) {
 	if err != nil || cfg.Stack != "my-stack" {
 		t.Fatalf("cfg %+v err %v", cfg, err)
 	}
+	if cfg.Defaults.Path != "shared-project" {
+		t.Fatalf("defaults.path %q, want the given project", cfg.Defaults.Path)
+	}
 	ms, errs := LoadManifests(dir, cfg)
 	if len(errs) != 0 || len(ms) != 1 {
 		t.Fatalf("scaffold manifests: %d errs %v", len(ms), errs)
 	}
-	if _, err := Init(dir, "my-stack"); err == nil {
+	if _, err := Init(dir, "my-stack", ""); err == nil {
 		t.Fatal("second init must refuse")
 	}
-	if _, err := Init(t.TempDir(), "Bad Name"); err == nil {
+	if _, err := Init(t.TempDir(), "Bad Name", ""); err == nil {
 		t.Fatal("bad stack name must refuse")
 	}
 }

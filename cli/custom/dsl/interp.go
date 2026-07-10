@@ -2,6 +2,7 @@ package dsl
 
 import (
 	"fmt"
+	"hash/fnv"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -45,7 +46,33 @@ func ResolveVars(cfg StackConfig, varFile string, cliVars []string) (map[string]
 			vars[name] = v
 		}
 	}
+	// Builtins, injected last so they cannot be shadowed: ${var.stack} is the
+	// stack name; ${var.unique} is a deterministic 8-char hash of it (bicep
+	// uniqueString style) — same stack, same suffix, so re-applies stay
+	// idempotent while identities avoid workspace-wide key collisions.
+	vars["stack"] = cfg.Stack
+	vars["unique"] = uniqueString(cfg.Stack)
 	return vars, nil
+}
+
+// uniqueString hashes seeds to 8 chars of a base32 alphabet (a-z, 2-7),
+// mirroring bicep's uniqueString: deterministic, not random.
+func uniqueString(seeds ...string) string {
+	h := fnv.New64a()
+	for i, s := range seeds {
+		if i > 0 {
+			h.Write([]byte{'-'})
+		}
+		h.Write([]byte(s))
+	}
+	const alphabet = "abcdefghijklmnopqrstuvwxyz234567"
+	v := h.Sum64()
+	out := make([]byte, 8)
+	for i := range out {
+		out[i] = alphabet[v&31]
+		v >>= 5
+	}
+	return string(out)
 }
 
 // Interpolate resolves ${var.*}, ${env.*} and {$file: ...} nodes in every
@@ -60,6 +87,15 @@ func Interpolate(ms []Manifest, vars map[string]string) []ValidationError {
 		out, ok := interpNode(m.Spec, m, vars, bad)
 		if ok {
 			m.Spec, _ = out.(map[string]any)
+		}
+		// Identity and path fields interpolate too, so manifests can build
+		// workspace-unique names: key: ${var.stack}-agent or -${var.unique}.
+		for _, f := range []*string{&m.Metadata.Key, &m.Metadata.DisplayName, &m.Metadata.Name, &m.Metadata.Path} {
+			if res, ok := interpString(*f, m, vars, bad); ok {
+				if s, isStr := res.(string); isStr {
+					*f = s
+				}
+			}
 		}
 	}
 	return errs
@@ -129,7 +165,7 @@ func interpString(s string, m *Manifest, vars map[string]string, bad func(string
 		default: // env
 			val := os.Getenv(name)
 			if val == "" {
-				bad("${env.%s} is not set in the environment", name)
+				bad("${env.%s} is not set — export %s=… (read at run time, never stored in files or state)", name, name)
 				failed = true
 				return match
 			}

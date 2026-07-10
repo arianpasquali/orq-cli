@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"orq/cli/custom/dsl"
@@ -13,11 +15,12 @@ import (
 )
 
 // NewDSLCommand groups the declarative provisioning commands:
-// orq dsl validate|plan|apply|pull|destroy|state|init.
+// orq stack validate|plan|apply|pull|destroy|state|init ("dsl" kept as alias).
 func NewDSLCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "dsl",
-		Short: "Declarative workspace provisioning (validate, plan, apply, pull, destroy)",
+		Use:     "stack",
+		Aliases: []string{"dsl"},
+		Short:   "Declarative workspace provisioning — validate, plan, apply, pull, destroy",
 		Long: "Describe orq workspace resources as YAML manifests and reconcile them\n" +
 			"against the live workspace: plan shows the diff, apply executes it,\n" +
 			"pull serializes live resources back to files.",
@@ -31,7 +34,23 @@ func NewDSLCommand() *cobra.Command {
 		newDSLDestroyCommand(),
 		newDSLStateCommand(),
 	)
+	silenceUsageOnRun(cmd)
 	return cmd
+}
+
+// silenceUsageOnRun keeps cobra's usage dump for flag/arg mistakes (pre-RunE)
+// but suppresses it for runtime failures — a failed validate or API call is
+// not a reason to reprint the flag table.
+func silenceUsageOnRun(cmd *cobra.Command) {
+	for _, c := range cmd.Commands() {
+		silenceUsageOnRun(c)
+	}
+	if run := cmd.RunE; run != nil {
+		cmd.RunE = func(c *cobra.Command, args []string) error {
+			c.SilenceUsage = true
+			return run(c, args)
+		}
+	}
 }
 
 // addStackFlags wires the flags shared by every command that reads a stack
@@ -44,23 +63,49 @@ func addStackFlags(cmd *cobra.Command) (dir *string, varFile *string, cliVars *[
 }
 
 func newDSLInitCommand() *cobra.Command {
-	var stack, dir string
+	var stack, dir, project string
 	cmd := &cobra.Command{
-		Use:   "init",
-		Short: "Scaffold orq.yaml and an example manifest",
+		Use:   "init [stack]",
+		Short: "Scaffold a stack directory with orq.yaml and an example manifest",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			files, err := dsl.Init(dir, stack)
+			if len(args) == 1 && stack == "" {
+				stack = args[0]
+			}
+			// `orq stack init foo` scaffolds ./foo (like git/cargo); an
+			// explicit -f wins.
+			if stack != "" && !cmd.Flags().Changed("file") {
+				dir = stack
+			}
+			if project == "" {
+				def := stack
+				if def == "" {
+					if abs, err := filepath.Abs(dir); err == nil {
+						def = strings.ToLower(filepath.Base(abs))
+					}
+				}
+				prompt := &survey.Input{
+					Message: "orq project resources live in (must already exist; the one your API key is scoped to):",
+					Default: def,
+				}
+				// Non-interactive (CI, piped): fall back to the default silently.
+				if err := survey.AskOne(prompt, &project); err != nil {
+					project = def
+				}
+			}
+			files, err := dsl.Init(dir, stack, project)
 			if err != nil {
 				return err
 			}
 			for _, f := range files {
 				fmt.Fprintf(cmd.OutOrStdout(), "created  %s\n", f)
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "\nnext:\n  orq dsl validate -f %s\n  orq dsl plan -f %s\n", dir, dir)
+			fmt.Fprintf(cmd.OutOrStdout(), "\nnext:\n  orq stack validate -f %s\n  orq stack plan -f %s\n", dir, dir)
 			return nil
 		},
 	}
 	cmd.Flags().StringVar(&stack, "stack", "", "Stack name (default: directory name)")
+	cmd.Flags().StringVar(&project, "project", "", "Existing orq project resources live in (default: stack name)")
 	cmd.Flags().StringVarP(&dir, "file", "f", ".", "Directory to scaffold")
 	return cmd
 }
@@ -74,16 +119,14 @@ func newDSLValidateCommand() *cobra.Command {
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ms, _, errs := dsl.Validate(*dir, *varFile, *cliVars)
 		if len(errs) > 0 {
-			for _, e := range errs {
-				fmt.Fprintf(cmd.ErrOrStderr(), "✗ %s\n", e.Error())
-			}
-			return fmt.Errorf("%d validation error(s)", len(errs))
+			dsl.RenderValidationErrors(cmd.ErrOrStderr(), errs, true)
+			os.Exit(1)
 		}
 		kinds := map[string]bool{}
 		for _, m := range ms {
 			kinds[m.Kind] = true
 		}
-		fmt.Fprintf(cmd.OutOrStdout(), "✓ %d manifests · %d kinds · schema ok · refs ok · vars ok\n", len(ms), len(kinds))
+		dsl.RenderValidateOK(cmd.OutOrStdout(), len(ms), len(kinds), true)
 		return nil
 	}
 	return cmd
@@ -102,7 +145,7 @@ func newDSLPlanCommand() *cobra.Command {
 		}
 		dsl.RenderPlan(cmd.OutOrStdout(), plan, true)
 		if plan.HasChanges() {
-			fmt.Fprintf(cmd.OutOrStdout(), "\nRun `orq dsl apply -f %s` to execute.\n", *dir)
+			fmt.Fprintf(cmd.OutOrStdout(), "\nRun `orq stack apply -f %s` to execute.\n", *dir)
 			os.Exit(2)
 		}
 		return nil
@@ -114,10 +157,8 @@ func newDSLPlanCommand() *cobra.Command {
 func buildPlanFromFlags(cmd *cobra.Command, dir, varFile string, cliVars []string) (*dsl.PlanResult, error) {
 	ms, cfg, verrs := dsl.Validate(dir, varFile, cliVars)
 	if len(verrs) > 0 {
-		for _, e := range verrs {
-			fmt.Fprintf(cmd.ErrOrStderr(), "✗ %s\n", e.Error())
-		}
-		return nil, fmt.Errorf("%d validation error(s)", len(verrs))
+		dsl.RenderValidationErrors(cmd.ErrOrStderr(), verrs, true)
+		os.Exit(1)
 	}
 	client := dsl.NewClient()
 	st, stateID, err := dsl.LoadState(client, cfg.Stack)
@@ -173,10 +214,22 @@ func newDSLApplyCommand() *cobra.Command {
 
 func newDSLPullCommand() *cobra.Command {
 	var project, outDir, stack string
+	var all bool
 	cmd := &cobra.Command{
 		Use:   "pull",
 		Short: "Serialize live workspace resources into manifest files",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Scope resolution: --project > the enclosing stack's project
+			// (orq.yaml defaults.path) > explicit --all. A bare pull in a
+			// random directory must not slurp the whole workspace.
+			if project == "" && !all {
+				if cfg, err := dsl.LoadStack("."); err == nil && cfg.Defaults.Path != "" {
+					project, _, _ = strings.Cut(cfg.Defaults.Path, "/")
+					fmt.Fprintf(cmd.OutOrStdout(), "scoped to project %q (from orq.yaml) — use --project or --all to override\n", project)
+				} else {
+					return errors.New("no project scope: pass --project <name>, run inside a stack directory (orq.yaml), or pass --all for the entire workspace")
+				}
+			}
 			client := dsl.NewClient()
 			var st *dsl.StateDoc
 			if stack != "" {
@@ -211,6 +264,7 @@ func newDSLPullCommand() *cobra.Command {
 	// no -o shorthand: bartolo's root command owns -o (output format)
 	cmd.Flags().StringVar(&outDir, "out", ".", "Output directory")
 	cmd.Flags().StringVar(&stack, "stack", "", "Stack whose state should inform paths/identities")
+	cmd.Flags().BoolVar(&all, "all", false, "Pull the entire workspace (no project scope)")
 	return cmd
 }
 

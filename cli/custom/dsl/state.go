@@ -89,7 +89,7 @@ func SaveState(c *Client, doc *StateDoc, skillID string, defaultPath string) (st
 		payload := map[string]any{
 			"display_name": stateSkillName(doc.Stack),
 			"path":         defaultPath,
-			"description":  "orq dsl stack state — managed by `orq dsl`, do not edit",
+			"description":  "orq stack state — managed by `orq stack`, do not edit",
 			"instructions": string(body),
 		}
 		if err := c.Do("POST", "/v2/skills", payload, &wrap); err != nil {

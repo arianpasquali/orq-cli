@@ -105,3 +105,39 @@ func TestFileIncludeErrors(t *testing.T) {
 		t.Fatalf("extra keys: %v", errs)
 	}
 }
+
+func TestBuiltinVarsAndIdentityInterpolation(t *testing.T) {
+	cfg := StackConfig{Stack: "acme-platform"}
+	vars, err := ResolveVars(cfg, "", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if vars["stack"] != "acme-platform" {
+		t.Fatalf("stack builtin: %q", vars["stack"])
+	}
+	u := vars["unique"]
+	if len(u) != 8 || u != uniqueString("acme-platform") {
+		t.Fatalf("unique builtin not deterministic: %q", u)
+	}
+	if uniqueString("other") == u {
+		t.Fatal("unique must differ per seed")
+	}
+	// builtins cannot be shadowed
+	cfg.Variables = map[string]string{"stack": "evil"}
+	vars, _ = ResolveVars(cfg, "", nil)
+	if vars["stack"] != "acme-platform" {
+		t.Fatalf("builtin shadowed: %q", vars["stack"])
+	}
+
+	ms := []Manifest{{Kind: "Agent", Metadata: Metadata{Key: "${var.stack}-agent-${var.unique}", Path: "${var.stack}"}, Spec: map[string]any{}}}
+	if errs := Interpolate(ms, vars); len(errs) != 0 {
+		t.Fatalf("interp errs: %v", errs)
+	}
+	want := "acme-platform-agent-" + u
+	if ms[0].Metadata.Key != want {
+		t.Fatalf("key %q, want %q", ms[0].Metadata.Key, want)
+	}
+	if ms[0].Metadata.Path != "acme-platform" {
+		t.Fatalf("path %q", ms[0].Metadata.Path)
+	}
+}

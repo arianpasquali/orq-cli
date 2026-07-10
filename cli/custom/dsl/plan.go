@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"sync"
 )
 
@@ -207,7 +208,9 @@ func colors(enabled bool) palette {
 	}
 }
 
-// RenderPlan prints the human plan.
+// RenderPlan prints the human plan, grouped into the same execution waves
+// apply will run — the wave gutter IS the dependency graph, topologically
+// sorted. Each resource that references others gets a dim "needs" line.
 func RenderPlan(w io.Writer, p *PlanResult, color bool) {
 	pal := colors(color)
 	rev := 0
@@ -220,26 +223,51 @@ func RenderPlan(w io.Writer, p *PlanResult, color bool) {
 		fmt.Fprintf(w, "%sNo changes. Workspace matches the manifests.%s\n", pal.head, pal.reset)
 		return
 	}
-	for _, wave := range p.Waves {
+	for wi, wave := range p.Waves {
+		label := fmt.Sprintf("wave %d", wi+1)
+		gutter := label
+		indent := strings.Repeat(" ", len(label)+4)
 		for _, ch := range wave {
-			switch ch.Op {
-			case OpNoop:
+			if ch.Op == OpNoop {
 				continue
-			case OpCreate:
-				fmt.Fprintf(w, "  %s+ %s%s\n", pal.add, ch.Identity, pal.reset)
-			case OpUpdate:
-				fmt.Fprintf(w, "  %s~ %s%s\n", pal.mod, ch.Identity, pal.reset)
-				for _, path := range ch.Paths {
-					fmt.Fprintf(w, "      %s%s%s\n", pal.dim, path, pal.reset)
-				}
+			}
+			glyph, c := opGlyph(ch.Op, pal)
+			suffix := ""
+			switch ch.Op {
 			case OpDelete:
-				fmt.Fprintf(w, "  %s− %s%s  %sremoved from files · owned by stack%s\n", pal.del, ch.Identity, pal.reset, pal.dim, pal.reset)
+				suffix = fmt.Sprintf("  %sremoved from files · owned by stack%s", pal.dim, pal.reset)
 			case OpReplace:
-				fmt.Fprintf(w, "  %s± %s%s  %s%s → delete + create%s\n", pal.rep, ch.Identity, pal.reset, pal.dim, ch.Reason, pal.reset)
+				suffix = fmt.Sprintf("  %s%s → delete + create%s", pal.dim, ch.Reason, pal.reset)
+			}
+			fmt.Fprintf(w, "%s%s%s  %s%s %s%s%s\n", pal.dim, gutter, pal.reset, c, glyph, ch.Identity, pal.reset, suffix)
+			gutter = strings.Repeat(" ", len(label))
+			for _, path := range ch.Paths {
+				fmt.Fprintf(w, "%s%s%s%s\n", indent, pal.dim, path, pal.reset)
+			}
+			if deps := changeDeps(ch); len(deps) > 0 {
+				fmt.Fprintf(w, "%s%s└─ needs %s%s\n", indent, pal.dim, strings.Join(deps, " · "), pal.reset)
 			}
 		}
 	}
 	fmt.Fprintf(w, "\n%sPlan: %d to create, %d to update, %d to delete, %d to replace.%s\n",
 		pal.head, p.Creates, p.Updates, p.Deletes, p.Replaces, pal.reset)
+}
+
+// changeDeps lists the distinct in-manifest references of a change, in
+// Kind/key form, for the plan's "needs" annotation.
+func changeDeps(ch Change) []string {
+	if ch.Manifest == nil {
+		return nil
+	}
+	seen := map[string]bool{}
+	var out []string
+	for _, r := range extractRefs(ch.Manifest) {
+		id := r.Kind + "/" + r.Key
+		if !seen[id] {
+			seen[id] = true
+			out = append(out, id)
+		}
+	}
+	return out
 }
 

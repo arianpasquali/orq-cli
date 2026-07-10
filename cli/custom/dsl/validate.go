@@ -2,8 +2,43 @@ package dsl
 
 import (
 	"fmt"
+	"io"
 	"strings"
 )
+
+// RenderValidationErrors prints every error at once — red ✗, aligned file:line
+// column, then a bold summary line. Mirrors RenderPlan's palette handling.
+func RenderValidationErrors(w io.Writer, errs []ValidationError, color bool) {
+	pal := colors(color)
+	width := 0
+	locs := make([]string, len(errs))
+	for i, e := range errs {
+		if e.File != "" {
+			locs[i] = e.File
+			if e.Line > 0 {
+				locs[i] += ":" + itoa(e.Line)
+			}
+		}
+		if len(locs[i]) > width {
+			width = len(locs[i])
+		}
+	}
+	for i, e := range errs {
+		fmt.Fprintf(w, "%s✗%s %s%-*s%s  %s\n", pal.del, pal.reset, pal.head, width, locs[i], pal.reset, e.Msg)
+	}
+	noun := "errors"
+	if len(errs) == 1 {
+		noun = "error"
+	}
+	fmt.Fprintf(w, "\n%s%d %s, 0 warnings.%s\n", pal.head, len(errs), noun, pal.reset)
+}
+
+// RenderValidateOK prints the one-line success summary (green ✓).
+func RenderValidateOK(w io.Writer, manifests, kinds int, color bool) {
+	pal := colors(color)
+	fmt.Fprintf(w, "%s✓%s %d manifests · %d kinds · schema ok · refs ok · vars ok\n",
+		pal.add, pal.reset, manifests, kinds)
+}
 
 // Validate runs the full offline pipeline: load stack + manifests, resolve and
 // interpolate variables, then check every manifest against the kind registry.

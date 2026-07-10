@@ -97,14 +97,16 @@ func Pull(c *Client, projectName, outDir string, st *StateDoc, defaultPath strin
 	for _, info := range kinds {
 		for _, raw := range prefetch[info.Kind] {
 			m, keep, warn := liveToManifest(raw, info, projectName, projectID, st, defaultPath)
-			if warn != "" {
-				report.Warnings = append(report.Warnings, warn)
-			}
 			if !keep {
-				if m != nil {
+				// Out-of-scope or anonymous resources are skipped silently —
+				// warning about files never written is noise.
+				if m != nil && m.IdentityValue() != "" {
 					report.Skipped = append(report.Skipped, m.Identity())
 				}
 				continue
+			}
+			if warn != "" && m.IdentityValue() != "" {
+				report.Warnings = append(report.Warnings, warn)
 			}
 			m.Spec = symbolizeLive(m.Spec, m.Kind, idMap, mcpIdx)
 			redactions := redactSecrets(m, info)
@@ -135,8 +137,8 @@ func liveToManifest(raw map[string]any, info KindInfo, projectName, projectID st
 	if info.Kind == "Skill" && strings.HasPrefix(m.Metadata.DisplayName, stateSkillPrefix) {
 		return m, false, ""
 	}
-	if info.IdentityMode == "key" && m.Metadata.Key == "" {
-		return nil, false, ""
+	if m.IdentityValue() == "" {
+		return nil, false, "" // anonymous live object — nothing to address it by
 	}
 
 	// display_name as optional label on key kinds.
@@ -291,8 +293,10 @@ func writeManifestFile(path string, m *Manifest) error {
 	return os.WriteFile(path, []byte(buf.String()), 0o644)
 }
 
-// Init scaffolds a new stack directory.
-func Init(dir, stack string) ([]string, error) {
+// Init scaffolds a new stack directory. project names the pre-existing orq
+// project resources live in (API keys are project-scoped, so the stack never
+// creates it); empty means "same as the stack name".
+func Init(dir, stack, project string) ([]string, error) {
 	if stack == "" {
 		abs, err := filepath.Abs(dir)
 		if err != nil {
@@ -303,28 +307,35 @@ func Init(dir, stack string) ([]string, error) {
 	if !stackNameRe.MatchString(stack) {
 		return nil, fmt.Errorf("stack name %q must match %s (lowercase kebab)", stack, stackNameRe)
 	}
+	if project == "" {
+		project = stack
+	}
 	if _, err := os.Stat(filepath.Join(dir, "orq.yaml")); err == nil {
 		return nil, fmt.Errorf("orq.yaml already exists in %s", dir)
 	}
 	files := map[string]string{
-		"orq.yaml": fmt.Sprintf(`# orq dsl stack configuration.
+		"orq.yaml": fmt.Sprintf(`# orq stack configuration.
 stack: %s
 
 defaults:
   # metadata.path fallback for every manifest (project[/folder]).
+  # The project must already exist — create it in the UI when minting the
+  # project-scoped API key. The stack manages resources inside it only.
   path: %s
 
 variables:
   default_model: mistral/mistral-large-latest
-`, stack, stack),
+`, stack, project),
 		"agents/example-agent.yaml": `apiVersion: orq.ai/v1
 kind: Agent
 metadata:
-  key: example-agent
+  # Agent keys are WORKSPACE-unique. ${var.stack} is a builtin (the stack
+  # name); ${var.unique} is a deterministic 8-char hash of it, bicep-style.
+  key: ${var.stack}-example-agent
   display_name: Example Agent
 spec:
   role: Assistant
-  description: Minimal example agent scaffolded by orq dsl init.
+  description: Minimal example agent scaffolded by orq stack init.
   instructions: |
     You are a helpful assistant.
   model: ${var.default_model}
@@ -333,7 +344,7 @@ spec:
     tools:
       - type: current_date
 `,
-		"vars/example.yaml": `# Per-environment overrides: orq dsl plan -f . --var-file vars/example.yaml
+		"vars/example.yaml": `# Per-environment overrides: orq stack plan -f . --var-file vars/example.yaml
 default_model: mistral/mistral-large-latest
 `,
 	}

@@ -125,6 +125,19 @@ func (s *Simulator) create(w http.ResponseWriter, r *http.Request, base string, 
 }
 
 func (s *Simulator) find(base string, info KindInfo, idOrIdentity string) (int, map[string]any) {
+	// Key-addressed kinds resolve by identity ONLY — the platform has no
+	// /{server_id} route for them. Also accepting ids here once masked a real
+	// delete bug (engine deleted by ULID, platform 404'd, swallow hid it).
+	// Skills stay lenient: the live API accepts name or skill_id.
+	if info.GetByIdentity && info.IdentityMode == "key" {
+		field := map[string]string{"name": "name", "key": "key", "display_name": "display_name"}[info.IdentityMode]
+		for i, obj := range s.stores[base] {
+			if v, _ := obj[field].(string); v == idOrIdentity {
+				return i, obj
+			}
+		}
+		return -1, nil
+	}
 	idField := info.IDField
 	if idField == "" {
 		idField = "_id"
