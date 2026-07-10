@@ -55,7 +55,7 @@ spec:
     next apply.
 
 - `status` (`live` / `draft` / `pending` / `published`) is the tool's lifecycle knob
-  and a real managed field — declare it and the DSL reconciles it.
+  and a real managed field — declare it and the engine reconciles it.
 - **MCP discovered tools:** after creating an MCP tool, the platform connects to the
   server and discovers its tools (`mcp.tools[]`, server-generated ids). The engine
   re-fetches right after create so agents in the same apply can select them by name:

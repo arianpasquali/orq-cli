@@ -29,7 +29,7 @@ spec:
     Skill names allow letters, digits and underscores only, starting with a letter:
     `^[A-Za-z][A-Za-z0-9_]*$`. No dashes, no spaces. The platform enforces
     workspace-wide uniqueness on the name (which is why the name is directly
-    addressable — and why the DSL's own state hides in a Skill).
+    addressable — and why the stack's own state hides in a Skill).
 
 !!! warning "orq_dsl_state_* is reserved"
     Names starting with `orq_dsl_state_` are reserved for [stack state](../state-internals.md)

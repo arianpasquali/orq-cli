@@ -5,12 +5,15 @@ local simulator with zero production traffic — see [Risk-free: the simulator](
 
 ## 1. Build the CLI
 
-The DSL ships inside the `orq` CLI (branch `feat/dsl`). Build from source:
+Workspace Stacks ship inside the `orq` CLI (branch `feat/dsl`). Build from source:
 
 ```console
 $ go build -o bin/orq ./cmd/orq
-$ bin/orq dsl --help
+$ bin/orq stack --help
 ```
+
+!!! note
+    `orq dsl` is a permanent alias for `orq stack` — existing scripts keep working.
 
 ## 2. Authenticate
 
@@ -24,18 +27,21 @@ $ export ORQ_API_KEY=<your orq.ai API key>
 from `--server` / `ORQ_SERVER` / your CLI session, default `https://api.orq.ai`.
 
 !!! note
-    `orq dsl validate` runs fully offline — no credentials needed. Only `plan`,
+    `orq stack validate` runs fully offline — no credentials needed. Only `plan`,
     `apply`, `pull`, `destroy`, and `state list` talk to the API.
 
 ## 3. Scaffold a stack
 
 ```console
-$ mkdir quickstart && cd quickstart
-$ orq dsl init --stack quickstart
+$ orq stack init quickstart
+? orq project resources live in (must already exist; the one your API key is scoped to): quickstart
 created  agents/example-agent.yaml
 created  orq.yaml
 created  vars/example.yaml
+$ cd quickstart
 ```
+
+`init <stack>` scaffolds a directory named after the stack (an explicit `-f` wins).
 
 `orq.yaml` names the stack (the ownership scope) and sets defaults:
 
@@ -50,19 +56,20 @@ variables:
   default_model: mistral/mistral-large-latest
 ```
 
+The project (`defaults.path`, first segment of every `metadata.path`) must already
+exist — API keys are minted inside a project in the UI, so create the project there
+first and point the stack at it (`--project` skips the prompt). The stack manages
+resources *inside* the project and never calls the projects API.
+
+!!! note "Stack-owned projects need a workspace-scoped key"
+    Declaring a `kind: Project` manifest makes the stack create/delete the project
+    itself via `/v2/projects` — that endpoint returns HTTP 403 for project-scoped
+    API keys. Only declare one if your key is workspace-scoped.
+
 ## 4. Write manifests
 
-Replace the example with a project, a knowledge base, and an agent that references it.
+Replace the example agent with a knowledge base and an agent that references it.
 Delete `agents/example-agent.yaml`, then:
-
-```yaml title="project.yaml"
-apiVersion: orq.ai/v1
-kind: Project
-metadata:
-  name: quickstart
-spec:
-  description: Quickstart assets
-```
 
 ```yaml title="knowledge-bases/support-kb.yaml"
 apiVersion: orq.ai/v1
@@ -95,55 +102,57 @@ spec:
 ```
 
 Both resources omit `metadata.path`, so they land in `quickstart` (the default from
-`orq.yaml`). The first path segment names the project — which this stack also creates.
+`orq.yaml`). The first path segment names the pre-existing project from step 3.
 
 ## 5. Validate (offline)
 
 ```console
-$ orq dsl validate -f .
-✓ 3 manifests · 3 kinds · schema ok · refs ok · vars ok
+$ orq stack validate -f .
+✓ 2 manifests · 2 kinds · schema ok · refs ok · vars ok
 ```
 
 ## 6. Plan
 
 ```console
-$ orq dsl plan -f .
+$ orq stack plan -f .
 stack: quickstart · 0 live · state rev 0
 
-  + Project/quickstart
-  + KnowledgeBase/support-kb
-  + Agent/support-agent
+wave 1  + KnowledgeBase/support-kb
+wave 2  + Agent/support-agent
+          └─ needs KnowledgeBase/support-kb
 
-Plan: 3 to create, 0 to update, 0 to delete, 0 to replace.
+Plan: 2 to create, 0 to update, 0 to delete, 0 to replace.
 
-Run `orq dsl apply -f .` to execute.
+Run `orq stack apply -f .` to execute.
 ```
+
+The wave gutter shows execution order — the dependency graph, topologically
+sorted. `apply` runs exactly these waves.
 
 `plan` exits `2` when changes are pending, `0` when clean — CI can gate on it.
 
 ## 7. Apply
 
 ```console
-$ orq dsl apply -f .
+$ orq stack apply -f .
 ...
-? Apply these 3 changes? Yes
+? Apply these 2 changes? Yes
 
-wave 1  + Project/quickstart  created project_0001 (0s)
-wave 2  + KnowledgeBase/support-kb  created knowledgebase_0002 (0s)
-wave 3  + Agent/support-agent  created agent_0003 (0s)
+wave 1  + KnowledgeBase/support-kb  created knowledgebase_0002 (0s)
+wave 2  + Agent/support-agent  created agent_0003 (0s)
 
-Apply complete: 3 created, 0 updated, 0 deleted, 0 replaced.
+Apply complete: 2 created, 0 updated, 0 deleted, 0 replaced.
 ```
 
-Waves follow dependency order: Project first, leaves next, the referencing agent last.
-The agent body sent to the API carries `knowledge_bases: [{knowledge_id: "…"}]` — the
-`ref:` was translated to the id created one wave earlier.
+Waves follow dependency order: leaves first, the referencing agent last. The agent
+body sent to the API carries `knowledge_bases: [{knowledge_id: "…"}]` — the `ref:`
+was translated to the id created one wave earlier.
 
 ## 8. Plan again — converged
 
 ```console
-$ orq dsl plan -f .
-stack: quickstart · 3 live · state rev 3
+$ orq stack plan -f .
+stack: quickstart · 2 live · state rev 2
 
 No changes. Workspace matches the manifests.
 ```

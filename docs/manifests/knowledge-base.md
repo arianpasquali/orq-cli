@@ -1,7 +1,7 @@
 # KnowledgeBase
 
 RAG retrieval configuration — internal (platform-embedded) or external (bring your own
-retrieval API). Document ingestion is data plane and out of the DSL's scope.
+retrieval API). Document ingestion is data plane and out of the stack's scope.
 
 ```yaml
 apiVersion: orq.ai/v1
@@ -39,7 +39,7 @@ spec:
 ## Gotchas
 
 !!! warning "embedding_model is create-time"
-    The platform does not re-embed existing documents on model change, so the DSL
+    The platform does not re-embed existing documents on model change, so the engine
     marks `embedding_model` immutable: changing it plans a `±` **replace** — delete +
     create. Ingested documents live on the old entity and are lost with it; re-ingest
     after the replace. `retrieval_settings` by contrast update in place freely.

@@ -3,6 +3,14 @@
 The container everything else lives in. Tier 0 of every apply: projects are created
 before any resource whose `metadata.path` starts with their name.
 
+!!! warning "Requires a workspace-scoped API key"
+    API keys minted in the UI are **project-scoped** and get HTTP 403 on every
+    `/v2/projects` call — a stack declaring `kind: Project` cannot plan or apply
+    with one. The default is therefore to declare **no** Project manifest: `orq
+    stack init` asks for a pre-existing project and the stack only manages
+    resources inside it. Declare a Project only with a workspace-scoped key
+    (`project_scope: all`, mintable via a Management Key on `POST /v2/api-keys`).
+
 ```yaml
 apiVersion: orq.ai/v1
 kind: Project
@@ -40,7 +48,7 @@ it is deleted last. Paths can also point at projects the stack does *not* manage
 (pre-existing ones); folders below the project are auto-created either way.
 
 !!! note "Pull never emits Project manifests"
-    `orq dsl pull` serializes resources, not projects — `--project` is a scope filter.
+    `orq stack pull` serializes resources, not projects — `--project` is a scope filter.
     When adopting a pulled workspace into a stack, add the Project manifest by hand if
     you want the stack to own the project itself (and its deletion on `destroy`).
 

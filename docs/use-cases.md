@@ -26,8 +26,8 @@ Demos, PoCs, and onboarding workspaces are built, mutated during the meeting, an
 to rot. As a stack:
 
 ```console
-$ orq dsl apply -f demos/support-triage --auto-approve    # identical workspace, every time
-$ orq dsl destroy -f demos/support-triage --auto-approve  # zero residue afterwards
+$ orq stack apply -f demos/support-triage --auto-approve    # identical workspace, every time
+$ orq stack destroy -f demos/support-triage --auto-approve  # zero residue afterwards
 ```
 
 - A demo is a directory: project, agents, evaluators, KBs, tools — reproducible on any
@@ -42,7 +42,7 @@ $ orq dsl destroy -f demos/support-triage --auto-approve  # zero residue afterwa
 
 ## SDK developers: prompts and agents next to the code
 
-The app calls agents and prompts by key; the DSL puts the definitions in the same repo
+The app calls agents and prompts by key; the stack puts the definitions in the same repo
 as the callers:
 
 ```

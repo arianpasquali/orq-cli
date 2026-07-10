@@ -39,9 +39,9 @@ values, `--var`/`ORQ_VAR_*` handle one-off overrides.
 The workspace is selected by the **credential**, not by anything in the files:
 
 ```console
-$ ORQ_API_KEY=$DEV_KEY     orq dsl apply -f . --var-file vars/dev.yaml
-$ ORQ_API_KEY=$STAGING_KEY orq dsl apply -f . --var-file vars/staging.yaml
-$ ORQ_API_KEY=$PROD_KEY    orq dsl apply -f . --var-file vars/prod.yaml
+$ ORQ_API_KEY=$DEV_KEY     orq stack apply -f . --var-file vars/dev.yaml
+$ ORQ_API_KEY=$STAGING_KEY orq stack apply -f . --var-file vars/staging.yaml
+$ ORQ_API_KEY=$PROD_KEY    orq stack apply -f . --var-file vars/prod.yaml
 ```
 
 Each workspace gets its own state skill (`orq_dsl_state_acme_platform`), so the three

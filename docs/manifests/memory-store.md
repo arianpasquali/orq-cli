@@ -41,6 +41,6 @@ spec:
 
 - Path is write-only — reads don't return it; the declared value lives in stack state.
 - Agents attach stores by key, as plain strings: `memory_stores: [user_context]` — the
-  API takes keys here, so there is no `ref:` wrapper and no id translation. The DSL
+  API takes keys here, so there is no `ref:` wrapper and no id translation. The engine
   still validates the target exists and orders the store before the agent.
 - `ttl` is seconds (the example is 30 days) and updates in place.

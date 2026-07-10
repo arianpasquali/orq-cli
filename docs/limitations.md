@@ -42,11 +42,11 @@ re-running always converges. See [State internals](state-internals.md#the-revisi
 `${var.*}`, `${env.*}`, `$file` — that's the entire language. No loops, no
 conditionals, no functions, no cross-manifest expressions. This is a feature (manifests
 stay diffable and reviewable); if you need twenty near-identical agents, generate the
-YAML with your own tooling and let the DSL own reconciliation.
+YAML with your own tooling and let the stack own reconciliation.
 
 ## Also out of scope in v1
 
-- **Data plane** — KB document ingestion, dataset rows (companion tooling, not DSL).
+- **Data plane** — KB document ingestion, dataset rows (companion tooling, not the stack).
 - **Admin plane** — members, groups, SSO/SCIM, API keys, budgets.
 - **Runtime** — experiment runs, logs, traces, invocations.
 - **Version promotion** — updates take whatever version behavior the public update

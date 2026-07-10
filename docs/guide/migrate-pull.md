@@ -7,7 +7,7 @@ manifests; a little editing turns those into a managed stack.
 
 ```console
 $ mkdir acme-stack && cd acme-stack
-$ orq dsl pull --project acme --out .
+$ orq stack pull --project acme --out .
 written  agents/eng-companion.yaml
 written  evaluators/faithfulness.yaml
 written  knowledge-bases/engineering-kb.yaml
@@ -45,8 +45,8 @@ Optionally add a `project.yaml` if the stack should own the project itself
 Verify the round-trip before touching anything:
 
 ```console
-$ orq dsl validate -f .
-$ orq dsl plan -f .
+$ orq stack validate -f .
+$ orq stack plan -f .
 stack: acme-platform · 4 live · state rev 0
 
 No changes. Workspace matches the manifests.
@@ -84,7 +84,7 @@ Move long prose into `$file` includes, hoist repeated scalars into `orq.yaml`
     So one `apply` after a faithful pull brings the whole set under management — from
     then on drift detection, file-removal `−` deletes, and `destroy` cover everything.
     Until that first apply, the stack owns nothing: deleting a manifest pre-adoption
-    just makes the DSL forget the file; no delete is issued.
+    just makes the stack forget the file; no delete is issued.
 
 !!! warning "Datasets: check for display-name duplicates first"
     Datasets have no unique key on the platform — several can share a display name.

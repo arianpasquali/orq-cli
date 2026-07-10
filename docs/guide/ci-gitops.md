@@ -19,7 +19,7 @@ jobs:
         with: { go-version: "1.25" }
       - run: go build -o bin/orq ./cmd/orq
       # No ORQ_API_KEY here — validate is fully offline.
-      - run: bin/orq dsl validate -f ./workspace
+      - run: bin/orq stack validate -f ./workspace
 
   plan:
     runs-on: ubuntu-latest
@@ -35,7 +35,7 @@ jobs:
           ORQ_API_KEY: ${{ secrets.ORQ_API_KEY }}
         run: |
           set +e
-          bin/orq dsl plan -f ./workspace --var-file vars/prod.yaml | tee plan.txt
+          bin/orq stack plan -f ./workspace --var-file vars/prod.yaml | tee plan.txt
           code=$?
           set -e
           # 0 = no changes, 2 = changes pending (fine on a PR), 1 = real error
@@ -71,7 +71,7 @@ jobs:
         env:
           ORQ_API_KEY: ${{ secrets.ORQ_API_KEY }}
           LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}   # ${env.*} refs in manifests
-        run: bin/orq dsl apply -f ./workspace --var-file vars/prod.yaml --auto-approve
+        run: bin/orq stack apply -f ./workspace --var-file vars/prod.yaml --auto-approve
 ```
 
 - `--auto-approve` replaces the interactive confirmation — gate it with branch

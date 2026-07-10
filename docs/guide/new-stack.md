@@ -7,7 +7,7 @@ workspace, start with [pull](migrate-pull.md) instead.)
 
 ```console
 $ mkdir acme-platform && cd acme-platform
-$ orq dsl init --stack acme-platform
+$ orq stack init --stack acme-platform
 ```
 
 Grow into the conventional layout — one directory per kind, one file per resource,
@@ -54,7 +54,7 @@ sibling files via `$file` — they diff like code, not YAML strings.
 ## 3. Validate early, validate often
 
 ```console
-$ orq dsl validate -f .
+$ orq stack validate -f .
 ✓ 12 manifests · 9 kinds · schema ok · refs ok · vars ok
 ```
 
@@ -66,8 +66,8 @@ targets, duplicate identities.
 ## 4. Plan, apply, iterate
 
 ```console
-$ orq dsl plan -f . --var-file vars/dev.yaml     # read the diff
-$ orq dsl apply -f . --var-file vars/dev.yaml    # confirm, execute
+$ orq stack plan -f . --var-file vars/dev.yaml     # read the diff
+$ orq stack apply -f . --var-file vars/dev.yaml    # confirm, execute
 ```
 
 The loop from here:
@@ -81,7 +81,7 @@ The loop from here:
 ## 5. Tear down when done
 
 ```console
-$ orq dsl destroy -f .
+$ orq stack destroy -f .
 ```
 
 Reverse dependency order, typed stack-name confirmation, state cleaned up. Ideal for

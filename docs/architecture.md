@@ -159,7 +159,7 @@ Within a wave, up to 4 operations run concurrently, with exponential backoff on
 
 ## Pull: the round-trip invariant
 
-`orq dsl pull` serializes live resources to `<kind-plural>/<identity>.yaml`, normalizing
+`orq stack pull` serializes live resources to `<kind-plural>/<identity>.yaml`, normalizing
 the same way plan does: server-computed fields stripped, ids symbolized back to `ref:`
 keys, MCP tool ids grouped back into `{type: mcp, ref, tools: [...]}`, secret fields
 redacted to `${env.*}` placeholders (with a warning naming each).

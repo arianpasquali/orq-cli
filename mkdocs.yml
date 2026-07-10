@@ -1,15 +1,20 @@
-# orq Workspace DSL documentation.
+# orq Workspace Stacks documentation.
 #   uvx --with mkdocs-material mkdocs serve    → live reload
 #   uvx --with mkdocs-material mkdocs build --strict
-site_name: orq Workspace DSL
+site_name: orq Workspace Stacks
 site_description: Declarative provisioning for orq.ai workspaces — validate, plan, apply, pull, destroy.
 copyright: Built by <a href="https://orq.ai" target="_blank" rel="noopener">Orq.ai</a>
 docs_dir: docs
 site_dir: site
 use_directory_urls: true
 
+# Repo-facing docs (generated, link to source files) are not site pages.
 exclude_docs: |
   transcripts/
+  CONFIGURATION.md
+  DEVELOPMENT.md
+  GETTING-STARTED.md
+  TESTING.md
 
 theme:
   name: material

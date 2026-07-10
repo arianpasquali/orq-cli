@@ -1,11 +1,11 @@
-# orq Workspace DSL
+# orq Workspace Stacks
 
 **Describe every asset in an orq.ai workspace as YAML files. Reconcile with one command.**
 
-The `orq dsl` command group turns a directory of Kubernetes-style manifests into a live orq workspace — and back:
+The `orq stack` command group turns a directory of Kubernetes-style manifests into a live orq workspace — and back:
 
 ```console
-$ orq dsl plan -f ./workspace --var-file vars/prod.yaml
+$ orq stack plan -f ./workspace --var-file vars/prod.yaml
 stack: acme-platform · 12 live · state rev 14
 
   + Evaluator/citation-presence
@@ -19,7 +19,7 @@ Plan: 1 to create, 1 to update, 1 to delete, 0 to replace.
 ## Why
 
 Workspaces are otherwise assembled by clicking the UI or writing one-off scripts. That
-doesn't review, doesn't reproduce, and doesn't scale past one team. The DSL gives orq
+doesn't review, doesn't reproduce, and doesn't scale past one team. Workspace Stacks give orq
 what Terraform and Kubernetes gave infrastructure:
 
 - **Files are the source of truth** — prompts, agents, evaluators, knowledge bases live
@@ -51,8 +51,8 @@ spec:                        # ← verbatim v2 API body, nothing invented
     - ref: engineering-kb    # refs by key; engine translates to ids
 ```
 
-One rule keeps the DSL small: **`spec` mirrors the public v2 API create/update body,
-snake_case, verbatim.** The DSL adds exactly three constructs — the envelope,
+One rule keeps the language small: **`spec` mirrors the public v2 API create/update body,
+snake_case, verbatim.** The language adds exactly three constructs — the envelope,
 `ref:` references, and `${var}` / `${env}` / `$file` interpolation.
 
 ## Nine kinds in v1

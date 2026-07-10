@@ -50,5 +50,5 @@ spec:
   passed through verbatim. Only `${var.*}` / `${env.*}` / `$file` are DSL constructs.
 - Long system messages read best as `$file` includes — the file's content is inlined
   as a string at plan time.
-- Versioning: updates go through the public update endpoint; the DSL does not
+- Versioning: updates go through the public update endpoint; the engine does not
   orchestrate Draft→Live promotion in v1.

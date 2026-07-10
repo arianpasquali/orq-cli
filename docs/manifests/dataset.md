@@ -1,6 +1,6 @@
 # Dataset
 
-A named container for evaluation/experiment rows. The DSL manages the container; rows
+A named container for evaluation/experiment rows. The stack manages the container; rows
 (datapoints) are data plane and out of scope.
 
 ```yaml

@@ -69,7 +69,7 @@ interrupted run loses at most the in-flight operation, and re-running converges.
 Inspect it anytime:
 
 ```console
-$ orq dsl state list -f .            # -o json for the raw document
+$ orq stack state list -f .            # -o json for the raw document
 ```
 
 ## The revision guard
@@ -93,7 +93,7 @@ part of platform ask #2.
 
 Symptoms and remedies, in escalating order:
 
-- **See what the stack thinks it owns:** `orq dsl state list -f .` — compare
+- **See what the stack thinks it owns:** `orq stack state list -f .` — compare
   `server_id`s with reality before anything drastic.
 - **A resource was deleted in the UI:** harmless. The stored id 404s, the engine falls
   through to rediscovery, and plan shows a `+` create. Apply heals it.
@@ -102,7 +102,7 @@ Symptoms and remedies, in escalating order:
 - **State skill holds invalid JSON** (someone edited it): `load state: skill
   orq_dsl_state_<stack> holds invalid JSON — repair or delete it`. Fix the JSON in
   place, or delete the skill and re-adopt (below).
-- **Deleting the state skill:** this **orphans** the stack's resources — the DSL
+- **Deleting the state skill:** this **orphans** the stack's resources — the engine
   forgets it ever owned them — but **never deletes any user resource**. The next apply
   rediscovers live resources by identity and **adopts every unchanged match back into
   state** with no API writes (see [the migration guide](guide/migrate-pull.md)), so a
@@ -111,6 +111,6 @@ Symptoms and remedies, in escalating order:
   delete tracking for resources whose manifests were already removed.
 
 !!! warning "Don't edit the state skill"
-    Its description says so: `orq dsl stack state — managed by 'orq dsl', do not
+    Its description says so: `orq stack stack state — managed by 'orq stack', do not
     edit`. Every hand edit risks the invalid-JSON error above; there is nothing in the
     document worth editing that a re-apply doesn't compute more accurately.

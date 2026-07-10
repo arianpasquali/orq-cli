@@ -31,7 +31,7 @@ camelCase translation, nothing invented. Consequences you can rely on:
 
 - The [API reference](https://docs.orq.ai/reference) documents your manifest fields 1:1.
 - `pull` is symmetric serialization, not a translation layer.
-- Fields the DSL doesn't know about pass straight through to the API.
+- Fields the engine doesn’t know about pass straight through to the API.
 
 The DSL adds exactly three constructs on top: the envelope above, `ref:` references,
 and `${var}` / `${env}` / `$file` interpolation.
@@ -105,9 +105,14 @@ headers:
 instructions: { $file: ./instructions.md }      # file content becomes the string
 ```
 
-- `${var.name}` — scalar values only, never keys/kinds/field names. Precedence, later
-  wins: `orq.yaml` `variables:` → `--var-file f.yaml` → `--var name=value` →
-  `ORQ_VAR_name` env var.
+- `${var.name}` — scalar values only, never YAML field names or kinds. Works in
+  `spec` and in the identity fields (`metadata.key`, `display_name`, `name`, `path`).
+  Precedence, later wins: `orq.yaml` `variables:` → `--var-file f.yaml` →
+  `--var name=value` → `ORQ_VAR_name` env var.
+- **Builtins** (injected last, cannot be shadowed): `${var.stack}` is the stack name;
+  `${var.unique}` is a deterministic 8-char hash of it (bicep `uniqueString` style,
+  base32 `a-z2-7`). Keys are workspace-unique on the platform, so the scaffold uses
+  `key: ${var.stack}-example-agent`; `-${var.unique}` is the shorter alternative.
 - `${env.NAME}` — read from the process environment; unset is a validation error.
   Never written to state, plan output, or pulled files.
 - `{$file: ./relative/path}` — must be the only key of its object; replaces the node
@@ -116,9 +121,15 @@ instructions: { $file: ./instructions.md }      # file content becomes the strin
 
 There is deliberately nothing else: no loops, no conditionals, no functions.
 
+!!! warning "Identity interpolation is still identity"
+    `${var.unique}` and `${var.stack}` are deterministic, so re-applies converge.
+    But renaming the stack changes both, which changes every identity built from
+    them — plan will show a full replace (delete + create). Treat stack renames as
+    intentional replacements, exactly like renaming a key by hand.
+
 ## Stack config: `orq.yaml`
 
-One per stack directory root; `orq dsl init` scaffolds it:
+One per stack directory root; `orq stack init` scaffolds it:
 
 ```yaml
 stack: acme-platform          # ownership scope + state name; lowercase kebab

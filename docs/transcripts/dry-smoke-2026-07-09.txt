@@ -2,7 +2,7 @@
 ————— build —————
 
 ————— start simulator :7899 —————
-2026/07/09 09:14:02 workspace simulator listening on http://127.0.0.1:7899 (in-memory, throwaway)
+2026/07/09 22:38:39 workspace simulator listening on http://127.0.0.1:7899 (in-memory, throwaway)
 
 ————— init —————
 created  agents/example-agent.yaml
@@ -10,8 +10,8 @@ created  orq.yaml
 created  vars/example.yaml
 
 next:
-  orq dsl validate -f /private/tmp/claude-501/-Users-arian-Developer-workspace-orqai-orq-thales-demo-workspace/11114788-07f6-48dc-94d9-56d41cf52868/scratchpad/smoke-run/stack
-  orq dsl plan -f /private/tmp/claude-501/-Users-arian-Developer-workspace-orqai-orq-thales-demo-workspace/11114788-07f6-48dc-94d9-56d41cf52868/scratchpad/smoke-run/stack
+  orq stack validate -f /var/folders/vz/90n0j7pd09l8lljy5p9mfmpr0000gn/T/tmp.V6CqOp9vrT/stack
+  orq stack plan -f /var/folders/vz/90n0j7pd09l8lljy5p9mfmpr0000gn/T/tmp.V6CqOp9vrT/stack
 [exit 0 — as expected]
 
 ————— write smoke stack (9 kinds) —————
@@ -20,97 +20,105 @@ next:
 ✓ 11 manifests · 9 kinds · schema ok · refs ok · vars ok
 [exit 0 — as expected]
 
+————— validate via legacy alias (orq dsl) —————
+✓ 11 manifests · 9 kinds · schema ok · refs ok · vars ok
+[exit 0 — as expected]
+
 ————— plan #1 — everything is new (expect exit 2) —————
-[2mstack: orq-dsl-smoke · 0 live · state rev 0[0m
+stack: orq-dsl-smoke · 0 live · state rev 0
 
-  [32m+ Project/orq-dsl-smoke[0m
-  [32m+ Dataset/orq-dsl-smoke|smoke-golden[0m
-  [32m+ Evaluator/smoke-judge[0m
-  [32m+ Evaluator/smoke-python-guard[0m
-  [32m+ KnowledgeBase/smoke-kb[0m
-  [32m+ MemoryStore/smoke_memory[0m
-  [32m+ Prompt/orq-dsl-smoke|smoke-classify[0m
-  [32m+ Skill/orq-dsl-smoke|smoke_playbook[0m
-  [32m+ Tool/smoke-http[0m
-  [32m+ Tool/smoke-linear[0m
-  [32m+ Agent/smoke-companion[0m
+wave 1  + Project/orq-dsl-smoke
+wave 2  + Dataset/orq-dsl-smoke|smoke-golden
+        + Evaluator/smoke-judge
+        + Evaluator/smoke-python-guard
+        + KnowledgeBase/smoke-kb
+        + MemoryStore/smoke_memory
+        + Prompt/orq-dsl-smoke|smoke-classify
+        + Skill/orq-dsl-smoke|smoke_playbook
+        + Tool/smoke-http
+        + Tool/smoke-linear
+wave 3  + Agent/smoke-companion
+          └─ needs KnowledgeBase/smoke-kb · MemoryStore/smoke_memory · Evaluator/smoke-python-guard · Evaluator/smoke-judge · Tool/smoke-http · Tool/smoke-linear
 
-[1mPlan: 11 to create, 0 to update, 0 to delete, 0 to replace.[0m
+Plan: 11 to create, 0 to update, 0 to delete, 0 to replace.
 
-Run `orq dsl apply -f /private/tmp/claude-501/-Users-arian-Developer-workspace-orqai-orq-thales-demo-workspace/11114788-07f6-48dc-94d9-56d41cf52868/scratchpad/smoke-run/stack` to execute.
+Run `orq stack apply -f /var/folders/vz/90n0j7pd09l8lljy5p9mfmpr0000gn/T/tmp.V6CqOp9vrT/stack` to execute.
 [exit 2 — as expected]
 
 ————— apply #1 —————
-[2mstack: orq-dsl-smoke · 0 live · state rev 0[0m
+stack: orq-dsl-smoke · 0 live · state rev 0
 
-  [32m+ Project/orq-dsl-smoke[0m
-  [32m+ Dataset/orq-dsl-smoke|smoke-golden[0m
-  [32m+ Evaluator/smoke-judge[0m
-  [32m+ Evaluator/smoke-python-guard[0m
-  [32m+ KnowledgeBase/smoke-kb[0m
-  [32m+ MemoryStore/smoke_memory[0m
-  [32m+ Prompt/orq-dsl-smoke|smoke-classify[0m
-  [32m+ Skill/orq-dsl-smoke|smoke_playbook[0m
-  [32m+ Tool/smoke-http[0m
-  [32m+ Tool/smoke-linear[0m
-  [32m+ Agent/smoke-companion[0m
+wave 1  + Project/orq-dsl-smoke
+wave 2  + Dataset/orq-dsl-smoke|smoke-golden
+        + Evaluator/smoke-judge
+        + Evaluator/smoke-python-guard
+        + KnowledgeBase/smoke-kb
+        + MemoryStore/smoke_memory
+        + Prompt/orq-dsl-smoke|smoke-classify
+        + Skill/orq-dsl-smoke|smoke_playbook
+        + Tool/smoke-http
+        + Tool/smoke-linear
+wave 3  + Agent/smoke-companion
+          └─ needs KnowledgeBase/smoke-kb · MemoryStore/smoke_memory · Evaluator/smoke-python-guard · Evaluator/smoke-judge · Tool/smoke-http · Tool/smoke-linear
 
-[1mPlan: 11 to create, 0 to update, 0 to delete, 0 to replace.[0m
+Plan: 11 to create, 0 to update, 0 to delete, 0 to replace.
 
-[2mwave 1[0m  [32m+ Project/orq-dsl-smoke[0m  [2mcreated project_0001 (0s)[0m
-[2mwave 2[0m  [32m+ Dataset/orq-dsl-smoke|smoke-golden[0m  [2mcreated dataset_0003 (0s)[0m
-[2mwave 2[0m  [32m+ Evaluator/smoke-judge[0m  [2mcreated evaluator_0012 (0s)[0m
-[2mwave 2[0m  [32m+ Evaluator/smoke-python-guard[0m  [2mcreated evaluator_0009 (0s)[0m
-[2mwave 2[0m  [32m+ KnowledgeBase/smoke-kb[0m  [2mcreated knowledgebase_0013 (0s)[0m
-[2mwave 2[0m  [32m+ MemoryStore/smoke_memory[0m  [2mcreated memorystore_0007 (0s)[0m
-[2mwave 2[0m  [32m+ Prompt/orq-dsl-smoke|smoke-classify[0m  [2mcreated prompt_0008 (0s)[0m
-[2mwave 2[0m  [32m+ Skill/orq-dsl-smoke|smoke_playbook[0m  [2mcreated skill_0010 (0s)[0m
-[2mwave 2[0m  [32m+ Tool/smoke-http[0m  [2mcreated tool_0011 (0s)[0m
-[2mwave 2[0m  [32m+ Tool/smoke-linear[0m  [2mcreated tool_0004 (0s)[0m
-[2mwave 3[0m  [32m+ Agent/smoke-companion[0m  [2mcreated agent_0014 (0s)[0m
+wave 1  + Project/orq-dsl-smoke  created project_0001 (0s)
+wave 2  + Dataset/orq-dsl-smoke|smoke-golden  created dataset_0007 (0s)
+wave 2  + Evaluator/smoke-judge  created evaluator_0008 (0s)
+wave 2  + Evaluator/smoke-python-guard  created evaluator_0012 (0s)
+wave 2  + KnowledgeBase/smoke-kb  created knowledgebase_0003 (0s)
+wave 2  + MemoryStore/smoke_memory  created memorystore_0009 (0s)
+wave 2  + Prompt/orq-dsl-smoke|smoke-classify  created prompt_0011 (0s)
+wave 2  + Skill/orq-dsl-smoke|smoke_playbook  created skill_0010 (0s)
+wave 2  + Tool/smoke-http  created tool_0013 (0s)
+wave 2  + Tool/smoke-linear  created tool_0004 (0s)
+wave 3  + Agent/smoke-companion  created agent_0014 (0s)
 
 Apply complete: 11 created, 0 updated, 0 deleted, 0 replaced.
 [exit 0 — as expected]
 
 ————— plan #2 — idempotence (expect exit 0, no changes) —————
-[2mstack: orq-dsl-smoke · 11 live · state rev 11[0m
+stack: orq-dsl-smoke · 11 live · state rev 11
 
-[1mNo changes. Workspace matches the manifests.[0m
+No changes. Workspace matches the manifests.
 [exit 0 — as expected]
 
 ————— mutate: agent instructions + evaluator prompt —————
 
 ————— plan #3 — drift (expect exit 2, two updates) —————
-[2mstack: orq-dsl-smoke · 11 live · state rev 11[0m
+stack: orq-dsl-smoke · 11 live · state rev 11
 
-  [33m~ Evaluator/smoke-judge[0m
-      [2mprompt[0m
-  [33m~ Agent/smoke-companion[0m
-      [2minstructions[0m
+wave 1  ~ Evaluator/smoke-judge
+          prompt
+wave 2  ~ Agent/smoke-companion
+          instructions
+          └─ needs KnowledgeBase/smoke-kb · MemoryStore/smoke_memory · Evaluator/smoke-python-guard · Evaluator/smoke-judge · Tool/smoke-http · Tool/smoke-linear
 
-[1mPlan: 0 to create, 2 to update, 0 to delete, 0 to replace.[0m
+Plan: 0 to create, 2 to update, 0 to delete, 0 to replace.
 
-Run `orq dsl apply -f /private/tmp/claude-501/-Users-arian-Developer-workspace-orqai-orq-thales-demo-workspace/11114788-07f6-48dc-94d9-56d41cf52868/scratchpad/smoke-run/stack` to execute.
+Run `orq stack apply -f /var/folders/vz/90n0j7pd09l8lljy5p9mfmpr0000gn/T/tmp.V6CqOp9vrT/stack` to execute.
 [exit 2 — as expected]
 
 ————— apply #2 —————
-[2mstack: orq-dsl-smoke · 11 live · state rev 11[0m
+stack: orq-dsl-smoke · 11 live · state rev 11
 
-  [33m~ Evaluator/smoke-judge[0m
-      [2mprompt[0m
-  [33m~ Agent/smoke-companion[0m
-      [2minstructions[0m
+wave 1  ~ Evaluator/smoke-judge
+          prompt
+wave 2  ~ Agent/smoke-companion
+          instructions
+          └─ needs KnowledgeBase/smoke-kb · MemoryStore/smoke_memory · Evaluator/smoke-python-guard · Evaluator/smoke-judge · Tool/smoke-http · Tool/smoke-linear
 
-[1mPlan: 0 to create, 2 to update, 0 to delete, 0 to replace.[0m
+Plan: 0 to create, 2 to update, 0 to delete, 0 to replace.
 
-[2mwave 1[0m  [33m~ Evaluator/smoke-judge[0m  [2mupdated (0s)[0m
-[2mwave 2[0m  [33m~ Agent/smoke-companion[0m  [2mupdated (0s)[0m
+wave 1  ~ Evaluator/smoke-judge  updated (0s)
+wave 2  ~ Agent/smoke-companion  updated (0s)
 
 Apply complete: 0 created, 2 updated, 0 deleted, 0 replaced.
 [exit 0 — as expected]
-[2mstack: orq-dsl-smoke · 11 live · state rev 13[0m
+stack: orq-dsl-smoke · 11 live · state rev 13
 
-[1mNo changes. Workspace matches the manifests.[0m
+No changes. Workspace matches the manifests.
 [exit 0 — as expected]
 
 ————— pull → fresh dir, then round-trip plan (expect no changes) —————
@@ -127,45 +135,45 @@ written  tools/smoke-linear.yaml
 ⚠ Tool/smoke-linear: mcp.headers.Authorization.value redacted → ${env.SMOKE_LINEAR_AUTHORIZATION} — set it before apply
 skipped  Skill/|orq_dsl_state_orq_dsl_smoke (outside --project scope)
 
-pulled 10 resources → /private/tmp/claude-501/-Users-arian-Developer-workspace-orqai-orq-thales-demo-workspace/11114788-07f6-48dc-94d9-56d41cf52868/scratchpad/smoke-run/pulled
+pulled 10 resources → /var/folders/vz/90n0j7pd09l8lljy5p9mfmpr0000gn/T/tmp.V6CqOp9vrT/pulled
 [exit 0 — as expected]
-[2mstack: orq-dsl-smoke · 11 live · state rev 13[0m
+stack: orq-dsl-smoke · 11 live · state rev 13
 
-[1mNo changes. Workspace matches the manifests.[0m
+No changes. Workspace matches the manifests.
 [exit 0 — as expected]
 
 ————— remove dataset manifest → plan shows delete → apply —————
-[2mstack: orq-dsl-smoke · 10 live · state rev 13[0m
+stack: orq-dsl-smoke · 10 live · state rev 13
 
-  [31m− Dataset/orq-dsl-smoke|smoke-golden[0m  [2mremoved from files · owned by stack[0m
+wave 1  − Dataset/orq-dsl-smoke|smoke-golden  removed from files · owned by stack
 
-[1mPlan: 0 to create, 0 to update, 1 to delete, 0 to replace.[0m
+Plan: 0 to create, 0 to update, 1 to delete, 0 to replace.
 
-Run `orq dsl apply -f /private/tmp/claude-501/-Users-arian-Developer-workspace-orqai-orq-thales-demo-workspace/11114788-07f6-48dc-94d9-56d41cf52868/scratchpad/smoke-run/stack` to execute.
+Run `orq stack apply -f /var/folders/vz/90n0j7pd09l8lljy5p9mfmpr0000gn/T/tmp.V6CqOp9vrT/stack` to execute.
 [exit 2 — as expected]
-[2mstack: orq-dsl-smoke · 10 live · state rev 13[0m
+stack: orq-dsl-smoke · 10 live · state rev 13
 
-  [31m− Dataset/orq-dsl-smoke|smoke-golden[0m  [2mremoved from files · owned by stack[0m
+wave 1  − Dataset/orq-dsl-smoke|smoke-golden  removed from files · owned by stack
 
-[1mPlan: 0 to create, 0 to update, 1 to delete, 0 to replace.[0m
+Plan: 0 to create, 0 to update, 1 to delete, 0 to replace.
 
-[2mwave 1[0m  [31m− Dataset/orq-dsl-smoke|smoke-golden[0m  [2mdeleted (0s)[0m
+wave 1  − Dataset/orq-dsl-smoke|smoke-golden  deleted (0s)
 
 Apply complete: 0 created, 0 updated, 1 deleted, 0 replaced.
 [exit 0 — as expected]
 
 ————— state list —————
 resources[10]{applied_at,identity,kind,path,server_id,spec_hash}:
-  "2026-07-09T07:14:04Z",Project/orq-dsl-smoke,Project,"",project_0001,"sha256:ff8978f78cabd641"
-  "2026-07-09T07:14:04Z",Evaluator/smoke-judge,Evaluator,orq-dsl-smoke,evaluator_0012,"sha256:ffe35a13ce4c604b"
-  "2026-07-09T07:14:04Z",Evaluator/smoke-python-guard,Evaluator,orq-dsl-smoke,evaluator_0009,"sha256:eaae550e224ded21"
-  "2026-07-09T07:14:04Z",KnowledgeBase/smoke-kb,KnowledgeBase,orq-dsl-smoke,knowledgebase_0013,"sha256:d676a560d6968984"
-  "2026-07-09T07:14:04Z",MemoryStore/smoke_memory,MemoryStore,orq-dsl-smoke,memorystore_0007,"sha256:c2903a7438564f12"
-  "2026-07-09T07:14:04Z",Prompt/orq-dsl-smoke|smoke-classify,Prompt,orq-dsl-smoke,prompt_0008,"sha256:fbcfe05fb692fdb6"
-  "2026-07-09T07:14:04Z",Skill/orq-dsl-smoke|smoke_playbook,Skill,orq-dsl-smoke,skill_0010,"sha256:bb8b483a8ce087c2"
-  "2026-07-09T07:14:04Z",Tool/smoke-http,Tool,orq-dsl-smoke,tool_0011,"sha256:4079fee24c05b844"
-  "2026-07-09T07:14:04Z",Tool/smoke-linear,Tool,orq-dsl-smoke,tool_0004,"sha256:d61291a5c73dc6cb"
-  "2026-07-09T07:14:04Z",Agent/smoke-companion,Agent,orq-dsl-smoke,agent_0014,"sha256:8090ec89b464f136"
+  "2026-07-09T20:38:41Z",Project/orq-dsl-smoke,Project,"",project_0001,"sha256:ff8978f78cabd641"
+  "2026-07-09T20:38:41Z",Evaluator/smoke-judge,Evaluator,orq-dsl-smoke,evaluator_0008,"sha256:ffe35a13ce4c604b"
+  "2026-07-09T20:38:41Z",Evaluator/smoke-python-guard,Evaluator,orq-dsl-smoke,evaluator_0012,"sha256:eaae550e224ded21"
+  "2026-07-09T20:38:41Z",KnowledgeBase/smoke-kb,KnowledgeBase,orq-dsl-smoke,knowledgebase_0003,"sha256:d676a560d6968984"
+  "2026-07-09T20:38:41Z",MemoryStore/smoke_memory,MemoryStore,orq-dsl-smoke,memorystore_0009,"sha256:c2903a7438564f12"
+  "2026-07-09T20:38:41Z",Prompt/orq-dsl-smoke|smoke-classify,Prompt,orq-dsl-smoke,prompt_0011,"sha256:fbcfe05fb692fdb6"
+  "2026-07-09T20:38:41Z",Skill/orq-dsl-smoke|smoke_playbook,Skill,orq-dsl-smoke,skill_0010,"sha256:bb8b483a8ce087c2"
+  "2026-07-09T20:38:41Z",Tool/smoke-http,Tool,orq-dsl-smoke,tool_0013,"sha256:4079fee24c05b844"
+  "2026-07-09T20:38:41Z",Tool/smoke-linear,Tool,orq-dsl-smoke,tool_0004,"sha256:d61291a5c73dc6cb"
+  "2026-07-09T20:38:41Z",Agent/smoke-companion,Agent,orq-dsl-smoke,agent_0014,"sha256:8090ec89b464f136"
 revision: 14
 stack: orq-dsl-smoke
 version: 1
@@ -184,19 +192,18 @@ Stack orq-dsl-smoke owns 10 resources:
   − Tool/smoke-linear
   − Agent/smoke-companion
 
-[2mwave 1[0m  [31m− Agent/smoke-companion[0m  [2mdeleted (0s)[0m
-[2mwave 2[0m  [31m− Evaluator/smoke-judge[0m  [2mdeleted (2ms)[0m
-[2mwave 2[0m  [31m− Evaluator/smoke-python-guard[0m  [2mdeleted (2ms)[0m
-[2mwave 2[0m  [31m− KnowledgeBase/smoke-kb[0m  [2mdeleted (0s)[0m
-[2mwave 2[0m  [31m− MemoryStore/smoke_memory[0m  [2mdeleted (2ms)[0m
-[2mwave 2[0m  [31m− Prompt/orq-dsl-smoke|smoke-classify[0m  [2mdeleted (1ms)[0m
-[2mwave 2[0m  [31m− Skill/orq-dsl-smoke|smoke_playbook[0m  [2mdeleted (0s)[0m
-[2mwave 2[0m  [31m− Tool/smoke-http[0m  [2mdeleted (0s)[0m
-[2mwave 2[0m  [31m− Tool/smoke-linear[0m  [2mdeleted (0s)[0m
-[2mwave 3[0m  [31m− Project/orq-dsl-smoke[0m  [2mdeleted (0s)[0m
+wave 1  − Agent/smoke-companion  deleted (0s)
+wave 2  − Evaluator/smoke-judge  deleted (0s)
+wave 2  − Evaluator/smoke-python-guard  deleted (0s)
+wave 2  − KnowledgeBase/smoke-kb  deleted (0s)
+wave 2  − MemoryStore/smoke_memory  deleted (0s)
+wave 2  − Prompt/orq-dsl-smoke|smoke-classify  deleted (0s)
+wave 2  − Skill/orq-dsl-smoke|smoke_playbook  deleted (0s)
+wave 2  − Tool/smoke-http  deleted (0s)
+wave 2  − Tool/smoke-linear  deleted (0s)
+wave 3  − Project/orq-dsl-smoke  deleted (0s)
 
 Destroyed 10 resources. Stack state removed.
 [exit 0 — as expected]
 
 ————— DONE — dry smoke passed —————
-./scripts/dsl-smoke.sh: line 219: 30565 Terminated: 15          ( cd "$ROOT" && exec go run ./cli/custom/dsl/simserver -port "$PORT" )
