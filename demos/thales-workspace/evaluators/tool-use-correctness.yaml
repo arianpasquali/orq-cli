@@ -1,0 +1,15 @@
+# EXPERIMENT scorer (local CI threshold 1.00, pass/fail) — not attached to any agent.
+# Sibling of citation-presence: this one asks "did a TOOL actually fire?"; that one asks
+# "is the ANSWER traceable to a source?".
+apiVersion: orq.ai/v1
+kind: Evaluator
+metadata:
+  key: thales-eval-tool-use-correctness
+spec:
+  type: python_eval
+  output_type: boolean
+  description: >-
+    Pass/fail. When the reference expects a real answer, the agent must have used a grounding
+    tool — shown by non-empty KB retrievals or a tool-output signature in the answer (a *.md doc
+    or a Linear/GitHub/Jira ticket reference). Off-topic / no-answer rows are not applicable (pass).
+  code: { $file: ./tool_use_correctness.py }

@@ -1,0 +1,22 @@
+apiVersion: orq.ai/v1
+kind: Agent
+metadata:
+  key: thales-hello-world
+  display_name: Hello World
+spec:
+  role: Assistant
+  description: >
+    Simplest possible orq.ai agent — a model plus instructions, no tools, no
+    knowledge base. The canonical "start here" reference; the MCP and LangChain
+    variants build on top of this.
+  model:
+    # Reachable default. On Thales on-prem, swap to a sovereign model served by IT.
+    id: openai/gpt-4o-mini
+  settings:
+    # Resource limits apply even to the trivial agent (security proof point).
+    max_iterations: 5
+    max_execution_time: 120
+  instructions: |
+    You are a friendly hello-world assistant for the Thales orq.ai onboarding.
+    Greet the user and answer their question concisely. You have no tools and no
+    knowledge base — you are the minimal reference agent.

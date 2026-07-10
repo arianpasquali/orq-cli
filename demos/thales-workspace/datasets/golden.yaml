@@ -1,0 +1,8 @@
+# The container only — the 16 golden rows (evals/golden_dataset.jsonl in the original
+# repo: EN/FR questions over KB / Linear / cross / no-answer sources) are data plane;
+# fill them with the SDK or the original's datasets_provision.py loader.
+apiVersion: orq.ai/v1
+kind: Dataset
+metadata:
+  display_name: engineering-companion-golden
+spec: {}

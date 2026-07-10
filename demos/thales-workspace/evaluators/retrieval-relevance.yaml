@@ -1,0 +1,13 @@
+# EXPERIMENT scorer (local CI threshold >= 0.90, graded) — not attached to any agent.
+apiVersion: orq.ai/v1
+kind: Evaluator
+metadata:
+  key: thales-eval-retrieval-relevance
+spec:
+  type: python_eval
+  output_type: number
+  description: >-
+    Graded 0..1. Fraction of the gold reference answer's salient terms covered by the retrieved
+    context (falls back to the answer text when the log carries no retrievals). No-answer rows are
+    not applicable (1.0). A platform-native restatement of the local expected-docs overlap scorer.
+  code: { $file: ./retrieval_relevance.py }

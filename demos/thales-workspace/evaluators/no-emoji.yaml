@@ -1,0 +1,17 @@
+# Monitor, not a guardrail: attached in agents/engineering-companion.yaml via
+# settings.evaluators — scores every answer, logs pass/fail to traces, never blocks.
+# Output evaluators run async on the finished answer, so they work on streamed
+# responses too (output *guardrails* are disabled while streaming).
+apiVersion: orq.ai/v1
+kind: Evaluator
+metadata:
+  key: thales-no-emoji
+spec:
+  type: python_eval
+  output_type: boolean
+  description: >-
+    Monitors answers for decorative emoji. mistral-medium tends to decorate status
+    tables with emoji despite the no-emoji instruction; this surfaces regressions in
+    traces without blocking. Deterministic regex — no judge model needed.
+  # evaluate(log) -> True when the answer is CLEAN (no emoji), False when emoji present.
+  code: { $file: ./no_emoji.py }

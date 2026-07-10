@@ -1,0 +1,15 @@
+# EXPERIMENT scorer (local CI threshold >= 0.70) — not attached to any agent.
+apiVersion: orq.ai/v1
+kind: Evaluator
+metadata:
+  key: thales-eval-answer-correctness
+spec:
+  type: llm_eval
+  mode: single
+  model: ${var.sovereign_model}
+  output_type: number
+  description: >-
+    Graded 0..1 LLM judge. Scores how well the answer matches the verified reference answer in
+    meaning (phrasing, formatting and extra-but-correct detail are ignored). A reference that
+    says the agent should decline scores 1.0 only if the answer also declines without inventing.
+  prompt: { $file: ./answer-correctness.judge.md }

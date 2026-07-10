@@ -1,0 +1,18 @@
+# Deliberately NOT referenced by any agent: the original's allowlist for Atlassian was
+# empty (tool names differ; discover first, then allowlist). The server exists in the
+# workspace; add `{type: mcp, ref: thales-atlassian-jira-demo, tools: [...]}` to the
+# companion agent once the read tool names are known. Omitting `tools:` would attach
+# EVERYTHING the server exposes — not what a read-only demo wants.
+apiVersion: orq.ai/v1
+kind: Tool
+metadata:
+  key: thales-atlassian-jira-demo
+  display_name: Jira MCP Server (read-only)
+spec:
+  type: mcp
+  description: Jira issues, boards and projects — read-only MCP (Atlassian).
+  mcp:
+    server_url: https://mcp.atlassian.com/v1/mcp
+    connection_type: http
+    headers:
+      Authorization: { value: "Bearer ${variables.JIRA_API_KEY}", encrypted: true }

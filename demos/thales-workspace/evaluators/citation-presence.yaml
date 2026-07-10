@@ -1,0 +1,13 @@
+# EXPERIMENT scorer (local CI threshold 1.00, pass/fail) — not attached to any agent.
+apiVersion: orq.ai/v1
+kind: Evaluator
+metadata:
+  key: thales-eval-citation-presence
+spec:
+  type: python_eval
+  output_type: boolean
+  description: >-
+    Pass/fail. A substantive answer must cite where it came from — non-empty retrievals, or a
+    source marker in the answer text (a *.md doc, a defect id like FDE-123, a PR/issue reference,
+    or linear/github/jira). No-answer / off-topic rows have nothing to cite (not applicable -> pass).
+  code: { $file: ./citation_presence.py }

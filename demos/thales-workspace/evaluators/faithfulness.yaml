@@ -1,0 +1,17 @@
+# EXPERIMENT scorer (local CI threshold >= 0.80) — deliberately not attached to any
+# agent. Faithfulness punishes *invented* facts; answer-correctness punishes
+# *wrong/missing* facts.
+apiVersion: orq.ai/v1
+kind: Evaluator
+metadata:
+  key: thales-eval-faithfulness
+spec:
+  type: llm_eval
+  mode: single
+  model: ${var.sovereign_model}
+  output_type: number
+  description: >-
+    Graded 0..1 LLM judge. Every factual claim in the answer must be supported by the retrieved
+    KB context (and, where context is silent, must not contradict the verified reference).
+    Inventing or contradicting facts scores low; declining ("I don't know") is faithful (1.0).
+  prompt: { $file: ./faithfulness.judge.md }

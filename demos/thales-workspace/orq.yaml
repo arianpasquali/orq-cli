@@ -1,0 +1,17 @@
+# Thales Engineering Companion — the orq-thales-demo-workspace onboarding scripts
+# (knowledge_bases_provision.py, agents_provision.py, evaluators_provision.py,
+# mcp_provision.py, datasets_provision.py, guardrails_assign.py) restated as one
+# declarative stack. See README.md for the mapping.
+stack: thales-demo
+
+defaults:
+  # Every resource in the original lives flat under the `thales-onboarding` project.
+  path: thales-onboarding
+
+variables:
+  # Sovereign-friendly tier (C3 "no OpenAI" routing rule) — agent + all LLM judges.
+  # On Thales on-prem, point at the Mistral/Gemma endpoint served by IT.
+  sovereign_model: mistral/mistral-large-latest
+  GITHUB_TOKEN: "example-token"
+  JIRA_API_KEY: "example-key"
+  LINEAGE_API_KEY: "example-key"

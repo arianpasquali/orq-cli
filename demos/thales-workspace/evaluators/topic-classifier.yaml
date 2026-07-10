@@ -1,0 +1,40 @@
+# Categorical "topic router" an EXTERNAL agent calls via POST /v2/evaluators/{id}/invoke —
+# a faithful SaaS reproduction of the Thales team's lea_computer_science_evaluator.
+# Deliberately not attached to any managed agent.
+apiVersion: orq.ai/v1
+kind: Evaluator
+metadata:
+  key: demo-topic-classifier-categorical
+spec:
+  type: llm_eval
+  mode: single
+  # Their instance points at an API-managed Mistral registered as a custom model;
+  # on SaaS we use the equivalent orq-native model.
+  model: mistral/mistral-small-2603
+  output_type: categorical
+  # Mirrors their model_parameters (max_tokens raised to 4096 so reasoning cannot
+  # starve the content budget: the "No messages" trap).
+  model_parameters:
+    temperature: 1
+    max_tokens: 4096
+  description: >
+    Determine if the input is related with computer science. Example of a categorical evaluator
+    consumed by an external agent (reproduces lea_computer_science_evaluator).
+  prompt: |
+    You must determine if {{ log.input }} is related to computer science. You must answer :
+    - Quantum if related to Quantum Computing
+    - Regular if related to Regular Computing
+    - Other if not related to Quantum or Regular Computing
+  categorical_labels:
+    - value: Quantum
+      description: Related to Quantum Computing
+    - value: Regular
+      description: Related to Regular Computing
+    - value: Other
+      description: Not related to computing sciences
+  # Guardrail rule (Studio "Pass if output is one of"): adds top-level `passed` to the response.
+  guardrail_config:
+    enabled: true
+    alert_on_failure: false
+    type: categorical
+    values: [Quantum, Regular]

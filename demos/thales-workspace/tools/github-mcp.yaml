@@ -1,0 +1,14 @@
+apiVersion: orq.ai/v1
+kind: Tool
+metadata:
+  key: thales-github-mcp
+  display_name: GitHub MCP Server (read-only)
+spec:
+  type: mcp
+  description: GitHub source code, pull requests, commits, branches and releases — read-only MCP.
+  mcp:
+    server_url: https://api.githubcopilot.com/mcp/
+    connection_type: http
+    headers:
+      # Fine-grained read-only PAT.
+      Authorization: { value: "Bearer ${variables.GITHUB_TOKEN}", encrypted: true }

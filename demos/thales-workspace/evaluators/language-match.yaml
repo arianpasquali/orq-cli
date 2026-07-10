@@ -1,0 +1,14 @@
+# EXPERIMENT scorer (local CI threshold >= 0.90, graded) — not attached to any agent.
+# Heuristic is approximate by design, which is why the CI gate sits at 0.90, not 1.00.
+apiVersion: orq.ai/v1
+kind: Evaluator
+metadata:
+  key: thales-eval-language-match
+spec:
+  type: python_eval
+  output_type: number
+  description: >-
+    Graded (1.0 / 0.0). The answer must be in the same language as the question. Expected language
+    is derived from the question text (FR question -> FR answer) using a French accent + function-word
+    heuristic, so no dataset `lang` column is required. Approximate by design.
+  code: { $file: ./language_match.py }

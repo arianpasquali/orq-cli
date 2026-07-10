@@ -1,0 +1,23 @@
+# INPUT guardrail on the Engineering Companion (attached in agents/engineering-companion.yaml
+# via settings.guardrails — no separate assign step). Input guardrails run even when the
+# response is streamed.
+apiVersion: orq.ai/v1
+kind: Evaluator
+metadata:
+  key: thales-prompt-injection
+spec:
+  type: llm_eval
+  mode: single
+  model: ${var.sovereign_model}
+  output_type: boolean
+  description: >-
+    Blocks user messages that try to override the agent's instructions, change its
+    role/safety rules, or exfiltrate its prompt/secrets. Attached as an INPUT guardrail.
+  # `value` is the PASSING verdict. The prompt returns true on an injection attempt,
+  # so the passing (clean) verdict is false; true => guardrail fails => HTTP 422.
+  guardrail_config:
+    enabled: true
+    type: boolean
+    value: false
+    alert_on_failure: true
+  prompt: { $file: ./prompt-injection.judge.md }

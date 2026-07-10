@@ -1,0 +1,16 @@
+# Document ingestion (5 markdown product references, 1500-char paragraph chunks) is
+# data plane — see README.md; the original's knowledge_bases_ingest.py still does that job.
+apiVersion: orq.ai/v1
+kind: KnowledgeBase
+metadata:
+  key: thales-engineering-kb
+spec:
+  type: internal
+  description: >
+    Thales aerospace & space product reference — public technical overviews of
+    FlytX avionics, PureFlyt FMS, AVANT / AVANT Up IFE, TopSky ATM, and the
+    Spacebus NEO satellite platform. Query this to answer questions about Thales
+    aerospace products, their capabilities, architecture, and interfaces.
+  # Sovereign-friendly (no-OpenAI rule). Immutable: changing it plans a ± replace,
+  # and ingested documents must be re-ingested afterwards.
+  embedding_model: mistral/mistral-embed

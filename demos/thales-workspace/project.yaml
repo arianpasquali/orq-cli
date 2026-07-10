@@ -1,0 +1,8 @@
+apiVersion: orq.ai/v1
+kind: Project
+metadata:
+  name: thales-onboarding
+spec:
+  description: >
+    Thales Engineering Companion PoC — agents, knowledge base, evaluators,
+    guardrails, MCP tools and the golden dataset container.

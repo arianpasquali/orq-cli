@@ -1,0 +1,15 @@
+apiVersion: orq.ai/v1
+kind: Tool
+metadata:
+  key: thales-linear-readonly
+  display_name: Linear MCP Server (read-only)
+spec:
+  type: mcp
+  description: Linear engineering tickets and projects — read-only MCP.
+  mcp:
+    server_url: https://mcp.linear.app/mcp
+    connection_type: http
+    headers:
+      # Linear's API may want the raw key without the Bearer prefix — adjust if a
+      # query fails after apply (same caveat as the original mcp_tools.yaml).
+      Authorization: { value: "Bearer ${variables.LINEAR_API_KEY}", encrypted: true }

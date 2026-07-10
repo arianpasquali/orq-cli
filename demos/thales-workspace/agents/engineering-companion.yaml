@@ -1,0 +1,79 @@
+# The flagship agent. In the original repo this took THREE imperative phases
+# (agents_provision.py → mcp_provision.py --attach → guardrails_assign.py) with a
+# documented clobbering gotcha between them. Here the agent owns its complete tool,
+# guardrail and knowledge-base set — one apply, no phases, nothing to clobber.
+apiVersion: orq.ai/v1
+kind: Agent
+metadata:
+  key: thales-engineering-companion   # agent keys are WORKSPACE-unique — keep the prefix
+  display_name: Thales Engineering Companion
+spec:
+  role: Assistant
+  description: >
+    Conversational companion for Thales engineers. Grounds every answer in the knowledge
+    base (product references), Linear (engineering tickets / work items), and GitHub (source
+    code, pull requests, commits, releases) — synthesising across them and citing its sources.
+  instructions: { $file: ./engineering-companion.instructions.md }
+  model:
+    id: ${var.sovereign_model}
+  settings:
+    # Resource limits = a cheap security proof point (deck slide 7 / cybersecurity).
+    max_iterations: 10
+    max_execution_time: 300
+    tools:
+      - type: current_date
+      - type: retrieve_knowledge_bases
+      - type: query_knowledge_base
+      # Read-only allowlists — the engine expands names to discovered tool_ids.
+      - type: mcp
+        ref: thales-linear-readonly
+        tools:
+          - list_issues
+          - get_issue
+          - list_comments
+          - get_attachment
+          - list_projects
+          - get_project
+          - list_documents
+          - get_document
+          - list_milestones
+          - get_milestone
+          - list_teams
+          - list_users
+          - search_documentation
+      - type: mcp
+        ref: thales-github-mcp
+        tools:
+          - search_code
+          - get_file_contents
+          - list_commits
+          - get_commit
+          - list_pull_requests
+          - pull_request_read
+          - list_branches
+          - get_latest_release
+          - list_issues
+          - issue_read
+          - list_issue_fields
+          - list_issue_types
+          - list_repository_collaborators
+          - get_team_members
+          - get_teams
+          - search_issues
+          - search_commits
+          - search_pull_requests
+          - search_users
+          - search_repositories
+    guardrails:
+      # Blocking INPUT guardrail: a failed check returns HTTP 422 before the model runs.
+      - ref: thales-prompt-injection
+        execute_on: input
+        sample_rate: 100
+    evaluators:
+      # Monitor-only OUTPUT evaluator: logs pass/fail to traces, never blocks,
+      # works on streamed responses (output guardrails would not).
+      - ref: thales-no-emoji
+        execute_on: output
+        sample_rate: 100
+  knowledge_bases:
+    - ref: thales-engineering-kb
